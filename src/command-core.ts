@@ -12,7 +12,7 @@ export const help = () => {
 
 	console.log(`Here's the list of all available commands:`);
 	console.table(tableCmds);
-	console.log('To read the details about any particular command type: help --command={commandName}');
+	console.log('To read the details about any particular command type: help --command=<command-name>');
 };
 
 export const unknownCmd = () => {

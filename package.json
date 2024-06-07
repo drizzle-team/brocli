@@ -4,14 +4,23 @@
 	"author": "Drizzle Team",
 	"version": "0.0.1",
 	"description": "Typed CLI command runner",
-	"main": "./src/index.ts",
+	"license": "Apache-2.0",
+	"sideEffects": false,
+	"publishConfig": {
+		"provenance": true
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/Sukairo-02/brocli.git"
+	},
+	"homepage": "https://github.com/Sukairo-02/brocli",
 	"scripts": {
 		"build": "pnpm tsx scripts/build.ts",
 		"b": "pnpm build",
 		"pack": "(cd dist && npm pack --pack-destination ..) && rm -f package.tgz && mv *.tgz package.tgz",
 		"publish": "npm publish package.tgz",
 		"test": "vitest run",
-		"mtest": "npx tsx Tests/manual.ts",
+		"mtest": "npx tsx tests/manual.ts",
 		"lint": "dprint check --list-different"
 	},
 	"devDependencies": {
@@ -25,6 +34,9 @@
 		"vitest": "^1.6.0",
 		"zx": "^8.1.2"
 	},
+	"main": "./index.cjs",
+	"module": "./index.js",
+	"types": "./index.d.ts",
 	"exports": {
 		".": {
 			"import": {
