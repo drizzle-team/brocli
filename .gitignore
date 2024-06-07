@@ -4,4 +4,4 @@ targetExample.ts
 dist
 dist-dts
 package.tgz
-tests/manual.ts
+/tests/manual.ts
