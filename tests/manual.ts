@@ -50,7 +50,7 @@ defineCommand({
 		console.log("Command 'test' has received following options:");
 		console.log(options);
 	},
-	hidden: true,
+	hidden: false,
 });
 
 defineCommand({
@@ -60,7 +60,7 @@ defineCommand({
 		console.log("Command 'test two' has received following options:");
 		console.log(options);
 	},
-	hidden: true,
+	hidden: false,
 });
 
 runCli();
