@@ -172,24 +172,30 @@ const getCommand = (args: string[]) => {
 const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: string) => {
 	let data: OutputType = undefined;
 
+	const argSplit = arg.split('=');
+
+	const namePart = argSplit.shift();
+	const dataPart = argSplit.join('=');
+
 	const option = options.find(([optKey, { config: opt }]) => {
 		const names = [opt.name!, ...opt.aliases];
 
 		switch (opt.type) {
 			case 'boolean': {
-				const match = names.find((name) => name === arg);
+				const match = names.find((name) => name === namePart);
 				if (!match) return false;
+
+				if (arg.includes('=')) {
+					throw new Error(
+						`Invalid syntax: boolean type argument '${opt.name}' must not have a value, pass it in the following format: ${opt.name}`,
+					);
+				}
 
 				data = true;
 				return true;
 			}
 
 			case 'string': {
-				const argSplit = arg.split('=');
-
-				const namePart = argSplit.shift();
-				const dataPart = argSplit.join('=');
-
 				const match = names.find((name) => {
 					if (namePart !== name) return false;
 
