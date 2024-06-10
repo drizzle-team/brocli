@@ -303,12 +303,14 @@ export const defineOptions = <TOptionConfig extends Record<string, GenericBuilde
 
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
-	for (const [key, value] of Object.entries(config)) {
+	const cfgEntries = Object.entries(config);
+
+	for (const [key, value] of cfgEntries) {
 		const cfg = value._.config;
 
 		if (cfg.name === undefined) cfg.name = key;
 
-		if (cfg.name.includes('=')) {
+		if (cfg.name!.includes('=')) {
 			throw new Error(
 				`Brocli error: can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
 			);
@@ -321,6 +323,14 @@ export const defineOptions = <TOptionConfig extends Record<string, GenericBuilde
 				);
 			}
 		}
+
+		cfg.name = generatePrefix(cfg.name);
+
+		cfg.aliases = cfg.aliases.map((a) => generatePrefix(a));
+	}
+
+	for (const [key, value] of cfgEntries) {
+		const cfg = value._.config;
 
 		const storageVals = Object.values(storedNames);
 
@@ -348,11 +358,15 @@ export const defineOptions = <TOptionConfig extends Record<string, GenericBuilde
 			}
 		}
 
-		storedNames[cfg.name] = [cfg.name, ...cfg.aliases];
+		storedNames[cfg.name!] = [cfg.name!, ...cfg.aliases];
 
-		cfg.name = generatePrefix(cfg.name);
+		storedNames[cfg.name!]!.forEach((name, idx) => {
+			if (storedNames[cfg.name!]!.findIndex((e) => e === name) === idx) return;
 
-		cfg.aliases = cfg.aliases.map((a) => generatePrefix(a));
+			throw new Error(
+				`Brocli error: can't define option '${cfg.name}': duplicate aliases '${name}'!`,
+			);
+		});
 
 		entries.push([key, { config: cfg, $output: undefined as any }]);
 	}

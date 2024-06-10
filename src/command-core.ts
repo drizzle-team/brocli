@@ -21,12 +21,6 @@ export const unknownCmd = () => {
 	throw new Error(msg);
 };
 
-export const unrecognizedCmd = (cmdName: string) => {
-	const msg = `Unrecognized command: ${cmdName}`;
-
-	throw new Error(msg);
-};
-
 export const cmdHelp = (command: Command) => {
 	const options = command.options
 		? Object.values(command.options).filter((opt) => !opt.config.isHidden).map(
@@ -67,6 +61,12 @@ export const missingRequired = (command: Command<any>, missingOpts: [string[], .
 	throw new Error(msg);
 };
 
+export const unrecognizedOptions = (command: Command<any>, unrecognizedArgs: [string, ...string[]]) => {
+	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
+
+	throw new Error(msg);
+};
+
 // Type area
 export type CommandHandler<TOpts extends ProcessedOptions | undefined = ProcessedOptions | undefined> = (
 	options: TOpts extends ProcessedOptions ? TypeOf<TOpts> : undefined,
@@ -85,12 +85,6 @@ export type Command<TOpts extends ProcessedOptions | undefined = ProcessedOption
 export const commandStorage: Record<string, Command<any>> = {};
 
 const storedNames: Record<string, [string, ...string[]]> = {};
-
-export const unrecognizedOptions = (command: Command<any>, unrecognizedArgs: [string, ...string[]]) => {
-	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
-
-	throw new Error(msg);
-};
 
 export const defineCommand = <
 	TOpts extends ProcessedOptions | undefined,
@@ -196,11 +190,7 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 			}
 
 			case 'string': {
-				const match = names.find((name) => {
-					if (namePart !== name) return false;
-
-					return true;
-				});
+				const match = names.find((name) => name === namePart);
 
 				if (!match) return false;
 
