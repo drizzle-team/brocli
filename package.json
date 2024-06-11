@@ -27,6 +27,7 @@
 		"@arethetypeswrong/cli": "^0.15.3",
 		"@originjs/vite-plugin-commonjs": "^1.0.3",
 		"@types/node": "^20.12.13",
+		"dprint": "^0.46.2",
 		"tsup": "^8.1.0",
 		"tsx": "^4.7.0",
 		"typescript": "latest",
