@@ -1,5 +1,5 @@
 import { boolean, defineCommand, defineOptions, runCli, string, type TypeOf } from '@/index';
-import { afterEach, beforeAll, beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, expectTypeOf } from 'vitest';
 
 const getArgs = (...args: string[]) => [
 	process.argv[0]!, // executing application path
@@ -429,5 +429,43 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			})
 		).toThrowError();
+	});
+});
+
+describe('Type tests', (it) => {
+	const generateOps = defineOptions({
+		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
+		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
+		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
+		name: string().alias('n').desc('Migration file name'),
+		breakpoints: string('breakpoints').alias('break').desc(`Prepare SQL statements with breakpoints`),
+		custom: string('custom').alias('cus').desc('Prepare empty migration file for custom SQL'),
+		config: string().alias('c', 'cfg').desc('Path to a config.json file, drizzle.config.ts by default').default(
+			'./drizzle-kit.config.ts',
+		),
+		flag: boolean().alias('f').desc('Example boolean field'),
+		defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
+		defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
+		debug: boolean('dbg').alias('g').hidden(),
+	});
+
+	it('Param type inferrence test', () => {
+		type GenerateOptions = TypeOf<typeof generateOps>;
+
+		type ExpectedType = {
+			dialect: string;
+			schema: string | undefined;
+			out: string | undefined;
+			name: string | undefined;
+			breakpoints: string | undefined;
+			custom: string | undefined;
+			config: string;
+			flag: boolean | undefined;
+			defFlag: boolean;
+			defString: string;
+			debug: boolean | undefined;
+		};
+
+		expectTypeOf<GenerateOptions>().toEqualTypeOf<ExpectedType>();
 	});
 });

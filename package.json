@@ -19,7 +19,7 @@
 		"b": "pnpm build",
 		"pack": "(cd dist && npm pack --pack-destination ..) && rm -f package.tgz && mv *.tgz package.tgz",
 		"publish": "npm publish package.tgz",
-		"test": "vitest run",
+		"test": "vitest run && npx tsc --noEmit",
 		"mtest": "npx tsx tests/manual.ts",
 		"lint": "dprint check --list-different"
 	},
