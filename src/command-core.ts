@@ -68,8 +68,14 @@ export const unrecognizedOptions = (command: Command<any>, unrecognizedArgs: [st
 };
 
 // Type area
+export type Simplify<T> =
+	& {
+		[K in keyof T]: T[K];
+	}
+	& {};
+
 export type CommandHandler<TOpts extends ProcessedOptions | undefined = ProcessedOptions | undefined> = (
-	options: TOpts extends ProcessedOptions ? TypeOf<TOpts> : undefined,
+	options: TOpts extends ProcessedOptions ? Simplify<TypeOf<TOpts>> : undefined,
 ) => any;
 
 export type Command<TOpts extends ProcessedOptions | undefined = ProcessedOptions | undefined> = {
