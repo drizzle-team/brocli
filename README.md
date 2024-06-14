@@ -11,7 +11,7 @@ Run CLI commands with fully typed handlers
 Start defining options using `defineOptions()` function:  
 
 ```Typescript
-import { defineOptions, string, boolean } from 'brocli'
+import { defineOptions, string, boolean } from '@drizzle-team/brocli'
 
 const commandOptions = defineOptions({
     opt1: string(),
@@ -65,7 +65,7 @@ For such cases, you'd want to infer type of `options` that will be passes inside
 You can do it using `TypeOf` type:  
 
 ```Typescript
-import { defineOptions, string, boolean, type TypeOf } from 'brocli'
+import { defineOptions, string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
 const commandOptions = defineOptions({
     opt1: string(),
@@ -83,7 +83,7 @@ export const commandHandler = (options: TypeOf<typeof commandOptions>) => {
 To define commands, use `defineCommand()` function:  
 
 ```Typescript
-import { defineOptions, defineCommand, string, boolean, type TypeOf } from 'brocli'
+import { defineOptions, defineCommand, string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
 const commandOptions = defineOptions({
     opt1: string(),
@@ -128,7 +128,7 @@ Parameters:
 After defining commands, you're going to need to execute `runCli()` function to start command execution
 
 ```Typescript
-import { runCli } from 'brocli'
+import { runCli } from '@drizzle-team/brocli'
 
 await runCli()
 ```
