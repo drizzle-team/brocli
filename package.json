@@ -1,5 +1,5 @@
 {
-	"name": "brocli",
+	"name": "@drizzle-team/brocli",
 	"type": "module",
 	"author": "Drizzle Team",
 	"version": "0.0.1",
@@ -11,9 +11,9 @@
 	},
 	"repository": {
 		"type": "git",
-		"url": "git+https://github.com/Sukairo-02/brocli.git"
+		"url": "git+https://github.com/drizzle-team/brocli.git"
 	},
-	"homepage": "https://github.com/Sukairo-02/brocli",
+	"homepage": "https://github.com/drizzle-team/brocli",
 	"scripts": {
 		"build": "pnpm tsx scripts/build.ts",
 		"b": "pnpm build",

@@ -44,5 +44,5 @@
 		"outDir": "dist"
 	},
 	"exclude": ["/**/node_modules/**/*", "**/dist"],
-	"include": ["src/**/*", "drizzle.config.ts", "Tests/**/*", "Server/**/*"]
+	"include": ["src/**/*", "drizzle.config.ts", "tests/**/*"]
 }

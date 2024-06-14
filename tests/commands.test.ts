@@ -46,8 +46,8 @@ beforeAll(() => {
 	const cFirstOps = defineOptions({
 		flag: boolean().alias('f', 'fl').desc('Boolean value'),
 		string: string().alias('s', 'str').desc('String value'),
-		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value'),
-		sString: string('sstring').alias('q', 'hs').desc('String value'),
+		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 	});
 
 	defineCommand({
@@ -63,8 +63,8 @@ beforeAll(() => {
 	const cSecondOps = defineOptions({
 		flag: boolean().alias('f', 'fl').desc('Boolean value'),
 		string: string().alias('s', 'str').desc('String value'),
-		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value'),
-		sString: string('sstring').alias('q', 'hs').desc('String value'),
+		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 	});
 
 	defineCommand({
