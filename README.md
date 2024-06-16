@@ -128,7 +128,7 @@ Parameters:
 After defining commands, you're going to need to execute `runCli()` function to start command execution
 
 ```Typescript
-import { runCli } from '@drizzle-team/brocli'
+import { command, type Command, runCli, string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
 const commandOptions = {
     opt1: string(),
