@@ -1,4 +1,5 @@
-import { boolean, defineCommand, defineOptions, runCli, string, type TypeOf } from '@/index';
+import { Command } from '@/command-core';
+import { boolean, command, runCli, string, type TypeOf } from '@/index';
 import { beforeAll, beforeEach, describe, expect, expectTypeOf } from 'vitest';
 
 const getArgs = (...args: string[]) => [
@@ -12,8 +13,10 @@ const storage = {
 	command: undefined as string | undefined,
 };
 
+const commands: Command[] = [];
+
 beforeAll(() => {
-	const generateOps = defineOptions({
+	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
 		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
 		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
@@ -27,30 +30,30 @@ beforeAll(() => {
 		defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
 		defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
 		debug: boolean('dbg').alias('g').hidden(),
-	});
+	};
 
 	const generateHandler = (options: TypeOf<typeof generateOps>) => {
 		storage.options = options;
 		storage.command = 'generate';
 	};
 
-	defineCommand({
+	commands.push(command({
 		name: 'generate',
 		aliases: ['g', 'gen'],
 		description: 'Generate drizzle migrations',
 		hidden: false,
 		options: generateOps,
 		handler: generateHandler,
-	});
+	}));
 
-	const cFirstOps = defineOptions({
+	const cFirstOps = {
 		flag: boolean().alias('f', 'fl').desc('Boolean value'),
 		string: string().alias('s', 'str').desc('String value'),
 		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
 		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
-	});
+	};
 
-	defineCommand({
+	commands.push(command({
 		name: 'c-first',
 		options: cFirstOps,
 		handler: (options) => {
@@ -58,16 +61,16 @@ beforeAll(() => {
 			storage.command = 'c-first';
 		},
 		hidden: false,
-	});
+	}));
 
-	const cSecondOps = defineOptions({
+	const cSecondOps = {
 		flag: boolean().alias('f', 'fl').desc('Boolean value'),
 		string: string().alias('s', 'str').desc('String value'),
 		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
 		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
-	});
+	};
 
-	defineCommand({
+	commands.push(command({
 		name: 'c-second',
 		options: cSecondOps,
 		handler: (options) => {
@@ -75,7 +78,7 @@ beforeAll(() => {
 			storage.command = 'c-second';
 		},
 		hidden: false,
-	});
+	}));
 });
 
 beforeEach(() => {
@@ -85,7 +88,7 @@ beforeEach(() => {
 
 describe('Option parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		await runCli(getArgs('generate', '--dialect=pg'));
+		runCli(commands, getArgs('generate', '--dialect=pg'));
 
 		expect(storage).toStrictEqual({
 			command: 'generate',
@@ -106,7 +109,8 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('All options by name', async () => {
-		await runCli(
+		runCli(
+			commands,
 			getArgs(
 				'generate',
 				'--dialect=pg',
@@ -140,7 +144,8 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('All options by alias', async () => {
-		await runCli(
+		runCli(
+			commands,
 			getArgs(
 				'generate',
 				'-dlc=pg',
@@ -175,25 +180,19 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		const error = await runCli(getArgs('generate'));
-
-		expect(error).toStrictEqual(
+		expect(() => runCli(commands, getArgs('generate'))).toThrowError(
 			new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
 		);
 	});
 
 	it('Unrecognized options', async () => {
-		const error = await runCli(getArgs('generate', '--dialect=pg', '--unknown-one', '-m'));
-
-		expect(error).toStrictEqual(
+		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '--unknown-one', '-m'))).toThrowError(
 			new Error(`Unrecognized options for command 'generate': --unknown-one, -m`),
 		);
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		const error = await runCli(getArgs('generate', '--dialect=pg', '-def=somevalue'));
-
-		expect(error).toStrictEqual(
+		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '-def=somevalue'))).toThrowError(
 			new Error(
 				`Invalid syntax: boolean type argument '--defFlag' must not have a value, pass it in the following format: --defFlag`,
 			),
@@ -201,9 +200,7 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		const error = await runCli(getArgs('generate', '--dialect=pg', '-ds'));
-
-		expect(error).toStrictEqual(
+		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '-ds'))).toThrowError(
 			new Error(
 				`Invalid syntax: string type argument '--defString' must have it's value passed in the following format: --defString=<value>`,
 			),
@@ -213,7 +210,7 @@ describe('Option parsing tests', (it) => {
 
 describe('Command parsing tests', (it) => {
 	it('Get the right command, no args', async () => {
-		await runCli(getArgs('c-first'));
+		runCli(commands, getArgs('c-first'));
 
 		expect(storage).toStrictEqual({
 			command: 'c-first',
@@ -227,7 +224,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command before args', async () => {
-		await runCli(getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'));
+		runCli(commands, getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'));
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -241,7 +238,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command between args', async () => {
-		await runCli(getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'));
+		runCli(commands, getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'));
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -255,7 +252,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command after args', async () => {
-		await runCli(getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'));
+		runCli(commands, getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'));
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -269,9 +266,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		const error = await runCli(getArgs('unknown', '--somearg=somevalue', '-f'));
-
-		expect(error).toStrictEqual(
+		expect(() => runCli(commands, getArgs('unknown', '--somearg=somevalue', '-f'))).toThrowError(
 			new Error(`Unable to recognize any of the commands.\nUse 'help' command to list all commands.`),
 		);
 	});
@@ -280,72 +275,104 @@ describe('Command parsing tests', (it) => {
 describe('Option definition tests', (it) => {
 	it('Duplicate names', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('f', 'fl'),
-				opSecond: boolean('flag').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('f', 'fl'),
+					opSecond: boolean('flag').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Duplicate aliases', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('f', 'fl'),
-				opSecond: boolean('flag').alias('-f', 'fl'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('f', 'fl'),
+					opSecond: boolean('flag').alias('-f', 'fl'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Name repeats alias', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('f', 'fl'),
-				opSecond: boolean('fl').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('f', 'fl'),
+					opSecond: boolean('fl').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Alias repeats name', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('f', 'fl'),
-				opSecond: boolean('flag2').alias('flag', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('f', 'fl'),
+					opSecond: boolean('flag2').alias('flag', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Duplicate names in same option', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('flag', 'fl'),
-				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('flag', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Duplicate aliases in same option', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('flag').alias('fl', 'fl'),
-				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('fl', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Forbidden character in name', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('fl=ag').alias('f', 'fl'),
-				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('fl=ag').alias('f', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
 
 	it('Forbidden character in alias', async () => {
 		expect(() =>
-			defineOptions({
-				opFirst: boolean('fl=ag').alias('f', 'f=l'),
-				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+			command({
+				name: '',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('fl=ag').alias('f', 'f=l'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
 			})
 		).toThrowError();
 	});
@@ -353,47 +380,55 @@ describe('Option definition tests', (it) => {
 
 describe('Command definition tests', (it) => {
 	it('Duplicate names', async () => {
-		expect(() =>
-			defineCommand({
+		expect(() => {
+			const cmd = command({
 				name: 'c-first',
 				handler: () => '',
-			})
-		).toThrowError();
+			});
+
+			runCli([...commands, cmd]);
+		}).toThrowError();
 	});
 
 	it('Duplicate aliases', async () => {
-		expect(() =>
-			defineCommand({
+		expect(() => {
+			const cmd = command({
 				name: 'c-third',
 				aliases: ['g'],
 				handler: () => '',
-			})
-		).toThrowError();
+			});
+
+			runCli([...commands, cmd]);
+		}).toThrowError();
 	});
 
 	it('Name repeats alias', async () => {
-		expect(() =>
-			defineCommand({
+		expect(() => {
+			const cmd = command({
 				name: 'gen',
 				aliases: ['c4'],
 				handler: () => '',
-			})
-		).toThrowError();
+			});
+
+			runCli([...commands, cmd]);
+		}).toThrowError();
 	});
 
 	it('Alias repeats name', async () => {
-		expect(() =>
-			defineCommand({
+		expect(() => {
+			const cmd = command({
 				name: 'c-fifth',
 				aliases: ['generate'],
 				handler: () => '',
-			})
-		).toThrowError();
+			});
+
+			runCli([...commands, cmd]);
+		}).toThrowError();
 	});
 
-	it('Duplicate names in same option', async () => {
+	it('Duplicate names in same command', async () => {
 		expect(() =>
-			defineCommand({
+			command({
 				name: 'c-sixth',
 				aliases: ['c-sixth', 'c6'],
 				handler: () => '',
@@ -401,9 +436,9 @@ describe('Command definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Duplicate aliases in same option', async () => {
+	it('Duplicate aliases in same command', async () => {
 		expect(() =>
-			defineCommand({
+			command({
 				name: 'c-seventh',
 				aliases: ['c7', 'c7', 'csvn'],
 				handler: () => '',
@@ -413,7 +448,7 @@ describe('Command definition tests', (it) => {
 
 	it('Forbidden character in name', async () => {
 		expect(() =>
-			defineCommand({
+			command({
 				name: '--c-eigth',
 				aliases: ['c8'],
 				handler: () => '',
@@ -423,7 +458,7 @@ describe('Command definition tests', (it) => {
 
 	it('Forbidden character in alias', async () => {
 		expect(() =>
-			defineCommand({
+			command({
 				name: 'c-ninth',
 				aliases: ['-c9'],
 				handler: () => '',
@@ -433,7 +468,7 @@ describe('Command definition tests', (it) => {
 });
 
 describe('Type tests', (it) => {
-	const generateOps = defineOptions({
+	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
 		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
 		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
@@ -447,7 +482,7 @@ describe('Type tests', (it) => {
 		defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
 		defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
 		debug: boolean('dbg').alias('g').hidden(),
-	});
+	};
 
 	it('Param type inferrence test', () => {
 		type GenerateOptions = TypeOf<typeof generateOps>;

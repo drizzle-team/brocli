@@ -6,21 +6,19 @@ Run CLI commands with fully typed handlers
 
 ### Defining options
 
-#### defineOptions()
-
-Start defining options using `defineOptions()` function:  
+Start defining options using `string()` and `boolean` functions:  
 
 ```Typescript
-import { defineOptions, string, boolean } from '@drizzle-team/brocli'
+import { string, boolean } from '@drizzle-team/brocli'
 
-const commandOptions = defineOptions({
+const commandOptions = {
     opt1: string(),
     opt2: boolean('flag').alias('f'),
     // And so on... 
-})
+}
 ```
 
-Keys of the object passed to `defineOptions()` determine to which keys parsed options will be assigned to inside your handler.  
+Keys of the object passed to the object storing options determine to which keys parsed options will be assigned to inside your handler.  
 
 #### Option builder
 
@@ -60,18 +58,18 @@ Extensions:
 
 ### Creating handlers
 
-Normally, you can write handlers right in the `defineCommand()` function, however there might be cases where you'd want to define your handlers separately.  
+Normally, you can write handlers right in the `command()` function, however there might be cases where you'd want to define your handlers separately.  
 For such cases, you'd want to infer type of `options` that will be passes inside your handler.  
 You can do it using `TypeOf` type:  
 
 ```Typescript
-import { defineOptions, string, boolean, type TypeOf } from '@drizzle-team/brocli'
+import { string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
-const commandOptions = defineOptions({
+const commandOptions = {
     opt1: string(),
     opt2: boolean('flag').alias('f'),
     // And so on... 
-})
+}
 
 export const commandHandler = (options: TypeOf<typeof commandOptions>) => {
     // Your logic goes here...
@@ -80,48 +78,50 @@ export const commandHandler = (options: TypeOf<typeof commandOptions>) => {
 
 ### Defining commands
 
-To define commands, use `defineCommand()` function:  
+To define commands, use `command()` function:  
 
 ```Typescript
-import { defineOptions, defineCommand, string, boolean, type TypeOf } from '@drizzle-team/brocli'
+import { command, type Command, string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
-const commandOptions = defineOptions({
+const commandOptions = {
     opt1: string(),
     opt2: boolean('flag').alias('f'),
     // And so on... 
-})
+}
 
 const commandHandler = (options: TypeOf<typeof commandOptions>) => {
     // Your logic goes here...
 }
 
-defineCommand({
+const commands: Command[] = []
+
+commands.push(command({
     name: 'command', 
     aliases: ['c', 'cmd'],
     description: 'Description goes here',
     hidden: false,
     options: commandOptions,
     handler: commandHandler,
-});
+}));
 ```
 
 Parameters:  
 
 -   `name` - name by which command is searched in cli args  
-    :warning: - must not start with `-` character and be unique per application  
+    :warning: - must not start with `-` character and be unique per command collection  
 
 -   `aliases` - aliases by which command is searched in cli args  
-    :warning: - must not start with `-` character and be unique per application  
+    :warning: - must not start with `-` character and be unique per command collection  
 
 -   `description` - description for command to be displayed in `help` command  
 
 -   `hidden` - sets command as hidden - if `true`, command will be omitted from being displayed in `help` command  
 
--   `options` - command options created using `defineOptions()` function  
+-   `options` - object containing command options created using `string()` and `boolean()` functions  
 
 -   `handler` - function, which will be executed in case of successful option parse  
 
-:speech_balloon: - `BroCLI` starts with having `help` command predefined, and despite the requirement for command names to be unique, `help` can actually be redefined so that your app could have it matching your output style.  
+:speech_balloon: - `BroCLI` starts with having `help` command predefined, and despite the requirement for command names to be unique, `help` can actually be redefined so that your app could have it matching your output style instead that of this library's.  
 
 ### Running commands
 
@@ -130,10 +130,33 @@ After defining commands, you're going to need to execute `runCli()` function to 
 ```Typescript
 import { runCli } from '@drizzle-team/brocli'
 
-await runCli()
+const commandOptions = {
+    opt1: string(),
+    opt2: boolean('flag').alias('f'),
+    // And so on... 
+}
+
+const commandHandler = (options: TypeOf<typeof commandOptions>) => {
+    // Your logic goes here...
+}
+
+const commands: Command[] = []
+
+commands.push(command({
+    name: 'command', 
+    aliases: ['c', 'cmd'],
+    description: 'Description goes here',
+    hidden: false,
+    options: commandOptions,
+    handler: commandHandler,
+}));
+
+// And so on...
+
+runCli(commands)
 ```
 
-:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source as an argument to `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.
+:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source as a second argument to `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.
 
 ## CLI
 

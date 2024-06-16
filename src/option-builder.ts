@@ -294,89 +294,17 @@ export type ProcessedOptions<
 		: never;
 };
 
-const generatePrefix = (name: string) => name.startsWith('-') ? name : name.length > 1 ? `--${name}` : `-${name}`;
-
-export const defineOptions = <TOptionConfig extends Record<string, GenericBuilderInternals>>(
-	config: TOptionConfig,
-): ProcessedOptions<TOptionConfig> => {
-	const entries: [string, GenericBuilderInternalsFields][] = [];
-
-	const storedNames: Record<string, [string, ...string[]]> = {};
-
-	const cfgEntries = Object.entries(config);
-
-	for (const [key, value] of cfgEntries) {
-		const cfg = value._.config;
-
-		if (cfg.name === undefined) cfg.name = key;
-
-		if (cfg.name!.includes('=')) {
-			throw new Error(
-				`Brocli error: can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
-			);
-		}
-
-		for (const alias of cfg.aliases) {
-			if (alias.includes('=')) {
-				throw new Error(
-					`Brocli error: can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
-				);
-			}
-		}
-
-		cfg.name = generatePrefix(cfg.name);
-
-		cfg.aliases = cfg.aliases.map((a) => generatePrefix(a));
+export type Simplify<T> =
+	& {
+		[K in keyof T]: T[K];
 	}
+	& {};
 
-	for (const [key, value] of cfgEntries) {
-		const cfg = value._.config;
-
-		const storageVals = Object.values(storedNames);
-
-		for (const storage of storageVals) {
-			const nameOccupier = storage.find((e) => e === cfg.name);
-
-			if (!nameOccupier) continue;
-
-			throw new Error(
-				`Brocli error: can't define option '${cfg.name}': name is already in use by option '${storage[0]}'!`,
-			);
-		}
-
-		for (const alias of cfg.aliases) {
-			for (const storage of storageVals) {
-				const nameOccupier = storage.find((e) => e === alias);
-
-				if (!nameOccupier) continue;
-
-				throw new Error(
-					`Brocli error: can't define option '${cfg.name}': alias '${alias}' is already in use by option '${
-						storage[0]
-					}'!`,
-				);
-			}
-		}
-
-		storedNames[cfg.name!] = [cfg.name!, ...cfg.aliases];
-
-		storedNames[cfg.name!]!.forEach((name, idx) => {
-			if (storedNames[cfg.name!]!.findIndex((e) => e === name) === idx) return;
-
-			throw new Error(
-				`Brocli error: can't define option '${cfg.name}': duplicate aliases '${name}'!`,
-			);
-		});
-
-		entries.push([key, { config: cfg, $output: undefined as any }]);
+export type TypeOf<TOptions extends Record<string, GenericBuilderInternals>> = Simplify<
+	{
+		[K in keyof TOptions]: TOptions[K]['_']['$output'];
 	}
-
-	return Object.fromEntries(entries) as ProcessedOptions<any>;
-};
-
-export type TypeOf<TOptions extends ProcessedOptions<any>> = {
-	[K in keyof TOptions]: TOptions[K]['$output'];
-};
+>;
 
 export function string<TName extends string>(
 	name: TName,
