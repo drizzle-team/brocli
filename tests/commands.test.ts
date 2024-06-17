@@ -1,5 +1,4 @@
-import { Command } from '@/command-core';
-import { boolean, command, runCli, string, type TypeOf } from '@/index';
+import { boolean, type Command, command, runCli, string, type TypeOf } from '@/index';
 import { beforeAll, beforeEach, describe, expect, expectTypeOf } from 'vitest';
 
 const getArgs = (...args: string[]) => [
