@@ -291,9 +291,8 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 
 const parseOptions = (command: Command, args: string[]): Record<string, OutputType> | undefined => {
 	const options = command.options;
-	if (!options) return undefined;
 
-	const optEntries = Object.entries(options);
+	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>);
 
 	const result: Record<string, OutputType> = {};
 
