@@ -5,3 +5,4 @@ dist
 dist-dts
 package.tgz
 /tests/manual.ts
+.DS_Store
