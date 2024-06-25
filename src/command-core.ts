@@ -475,8 +475,6 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
 		} else {
 			const targetName = args[helpIndex + 1]!;
 
-			console.warn(targetName);
-
 			command = cmds.find((cmd) => {
 				const names = cmd.aliases ? [cmd.name, ...cmd.aliases] : [cmd.name];
 
