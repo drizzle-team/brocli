@@ -1,4 +1,14 @@
-export type { Command, CommandHandler, GenericCommandHandler, RawCommand } from './command-core';
+export { BroCliError as BrocliError } from './brocli-error';
+export type {
+	BroCliConfig,
+	Command,
+	CommandHandler,
+	CommandHelpHandler,
+	GenericCommandHandler,
+	HelpHandler,
+	RawCommand,
+	VersionHelpHandler,
+} from './command-core';
 export { command, runCli } from './command-core';
 export type {
 	AssignConfigName,

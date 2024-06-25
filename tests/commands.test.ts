@@ -1,11 +1,14 @@
 import { boolean, type Command, command, runCli, string, type TypeOf } from '@/index';
-import { beforeAll, beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import stringArgv from 'string-argv';
+import { beforeEach, describe, expect, expectTypeOf, vi } from 'vitest';
 
 const getArgs = (...args: string[]) => [
 	process.argv[0]!, // executing application path
 	process.argv[1]!, // executed file path
 	...args,
 ];
+
+const fn = vi.fn;
 
 const storage = {
 	options: {} as Record<string, any>,
@@ -14,71 +17,69 @@ const storage = {
 
 const commands: Command[] = [];
 
-beforeAll(() => {
-	const generateOps = {
-		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
-		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
-		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
-		name: string().alias('n').desc('Migration file name'),
-		breakpoints: string('breakpoints').alias('break').desc(`Prepare SQL statements with breakpoints`),
-		custom: string('custom').alias('cus').desc('Prepare empty migration file for custom SQL'),
-		config: string().alias('c', 'cfg').desc('Path to a config.json file, drizzle.config.ts by default').default(
-			'./drizzle-kit.config.ts',
-		),
-		flag: boolean().alias('f').desc('Example boolean field'),
-		defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
-		defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
-		debug: boolean('dbg').alias('g').hidden(),
-	};
+const generateOps = {
+	dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
+	schema: string('schema').alias('s').desc('Path to a schema file or folder'),
+	out: string().alias('o').desc("Output folder, 'drizzle' by default"),
+	name: string().alias('n').desc('Migration file name'),
+	breakpoints: string('breakpoints').alias('break').desc(`Prepare SQL statements with breakpoints`),
+	custom: string('custom').alias('cus').desc('Prepare empty migration file for custom SQL'),
+	config: string().alias('c', 'cfg').desc('Path to a config.json file, drizzle.config.ts by default').default(
+		'./drizzle-kit.config.ts',
+	),
+	flag: boolean().alias('f').desc('Example boolean field'),
+	defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
+	defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
+	debug: boolean('dbg').alias('g').hidden(),
+};
 
-	const generateHandler = (options: TypeOf<typeof generateOps>) => {
+const generateHandler = (options: TypeOf<typeof generateOps>) => {
+	storage.options = options;
+	storage.command = 'generate';
+};
+
+commands.push(command({
+	name: 'generate',
+	aliases: ['g', 'gen'],
+	description: 'Generate drizzle migrations',
+	hidden: false,
+	options: generateOps,
+	handler: generateHandler,
+}));
+
+const cFirstOps = {
+	flag: boolean().alias('f', 'fl').desc('Boolean value'),
+	string: string().alias('s', 'str').desc('String value'),
+	sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
+};
+
+commands.push(command({
+	name: 'c-first',
+	options: cFirstOps,
+	handler: (options) => {
 		storage.options = options;
-		storage.command = 'generate';
-	};
+		storage.command = 'c-first';
+	},
+	hidden: false,
+}));
 
-	commands.push(command({
-		name: 'generate',
-		aliases: ['g', 'gen'],
-		description: 'Generate drizzle migrations',
-		hidden: false,
-		options: generateOps,
-		handler: generateHandler,
-	}));
+const cSecondOps = {
+	flag: boolean().alias('f', 'fl').desc('Boolean value'),
+	string: string().alias('s', 'str').desc('String value'),
+	sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
+};
 
-	const cFirstOps = {
-		flag: boolean().alias('f', 'fl').desc('Boolean value'),
-		string: string().alias('s', 'str').desc('String value'),
-		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
-		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
-	};
-
-	commands.push(command({
-		name: 'c-first',
-		options: cFirstOps,
-		handler: (options) => {
-			storage.options = options;
-			storage.command = 'c-first';
-		},
-		hidden: false,
-	}));
-
-	const cSecondOps = {
-		flag: boolean().alias('f', 'fl').desc('Boolean value'),
-		string: string().alias('s', 'str').desc('String value'),
-		sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
-		sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
-	};
-
-	commands.push(command({
-		name: 'c-second',
-		options: cSecondOps,
-		handler: (options) => {
-			storage.options = options;
-			storage.command = 'c-second';
-		},
-		hidden: false,
-	}));
-});
+commands.push(command({
+	name: 'c-second',
+	options: cSecondOps,
+	handler: (options) => {
+		storage.options = options;
+		storage.command = 'c-second';
+	},
+	hidden: false,
+}));
 
 beforeEach(() => {
 	storage.options = {};

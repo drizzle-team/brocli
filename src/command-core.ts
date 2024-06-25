@@ -1,3 +1,4 @@
+import { BroCliError } from './brocli-error';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
@@ -8,73 +9,6 @@ import {
 	type TypeOf,
 } from './option-builder';
 
-// Message area
-const help = (commands: Command[]) => {
-	const cmds = commands.filter((cmd) => !cmd.hidden);
-
-	const tableCmds = cmds.map((cmd) => ({
-		name: cmd.name,
-		aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
-		description: cmd.description ?? '-',
-	}));
-
-	console.log(`Here's the list of all available commands:`);
-	console.table(tableCmds);
-	console.log('To read the details about any particular command type: help --command=<command-name>');
-};
-
-const unknownCmd = () => {
-	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
-
-	throw new Error(msg);
-};
-
-const cmdHelp = (command: Command) => {
-	const options = command.options
-		? Object.values(command.options).filter((opt) => !opt.config?.isHidden).map(
-			({ config: opt }) => ({
-				name: opt.name,
-				aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
-				description: opt.description ?? '-',
-				type: opt.type,
-				required: opt.isRequired ? '✓' : '✗',
-			}),
-		)
-		: undefined;
-
-	console.log(
-		`Command: ${command.name}${command.aliases ? ` [${command.aliases.join(', ')}]` : ''}${
-			command.description ? ` - ${command.description}` : ''
-		}`,
-	);
-
-	if (!options?.length) return;
-
-	console.log('\nOptions:');
-	console.table(options);
-};
-
-const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...string[][]]) => {
-	const msg = `Command '${command.name}' is missing following required options: ${
-		missingOpts.map((opt) => {
-			const name = opt.shift()!;
-			const aliases = opt;
-
-			if (aliases.length) return `${name} [${aliases.join(', ')}]`;
-
-			return name;
-		}).join(', ')
-	}`;
-
-	throw new Error(msg);
-};
-
-const unrecognizedOptions = (command: RawCommand<any>, unrecognizedArgs: [string, ...string[]]) => {
-	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
-
-	throw new Error(msg);
-};
-
 // Type area
 export type CommandHandler<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
@@ -83,6 +17,21 @@ export type CommandHandler<
 > = (
 	options: TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 ) => any;
+
+export type HelpHandler = (commands: Command[]) => any;
+
+export type CommandHelpHandler = (command: Command) => any;
+
+export type VersionHelpHandler = (name: string, version: string) => any;
+
+export type BroCliConfig = {
+	name?: string;
+	version?: string;
+	argSource?: string[];
+	help?: HelpHandler;
+	commandHelp?: CommandHelpHandler;
+	versionHelp?: VersionHelpHandler;
+};
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
 
@@ -108,6 +57,89 @@ export type Command = {
 	handler: GenericCommandHandler;
 };
 
+// Message area
+const help = (commands: Command[]) => {
+	const cmds = commands.filter((cmd) => !cmd.hidden);
+
+	const tableCmds = cmds.map((cmd) => ({
+		name: cmd.name,
+		aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
+		description: cmd.description ?? '-',
+	}));
+
+	console.log(`Here's the list of all available commands:`);
+	console.table(tableCmds);
+	console.log('To read the details about any particular command type: help --command=<command-name>');
+};
+
+const unknownCommand = () => {
+	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
+
+	return new Error(msg);
+};
+
+const commandHelp = (command: Command) => {
+	const options = command.options
+		? Object.values(command.options).filter((opt) => !opt.config?.isHidden).map(
+			({ config: opt }) => ({
+				name: opt.name,
+				aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
+				description: opt.description ?? '-',
+				type: opt.type,
+				required: opt.isRequired ? '✓' : '✗',
+			}),
+		)
+		: undefined;
+
+	console.log(
+		`Command: ${command.name}${command.aliases ? ` [${command.aliases.join(', ')}]` : ''}${
+			command.description ? ` - ${command.description}` : ''
+		}`,
+	);
+
+	if (!options?.length) return;
+
+	console.log('\nOptions:');
+	console.table(options);
+};
+
+const versionHelp = (name: string, version: string) => {
+	console.log(`${command} - ${version}`);
+};
+
+const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...string[][]]) => {
+	const msg = `Command '${command.name}' is missing following required options: ${
+		missingOpts.map((opt) => {
+			const name = opt.shift()!;
+			const aliases = opt;
+
+			if (aliases.length) return `${name} [${aliases.join(', ')}]`;
+
+			return name;
+		}).join(', ')
+	}`;
+
+	return new Error(msg);
+};
+
+const unrecognizedOptions = (command: RawCommand<any>, unrecognizedArgs: [string, ...string[]]) => {
+	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
+
+	return new Error(msg);
+};
+
+const invalidBooleanSyntax = (matchedName: string) => {
+	return new Error(
+		`Invalid syntax: boolean type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value> | ${matchedName}.\nAllowed values: true, false, 0, 1`,
+	);
+};
+
+const invalidStringSyntax = (matchedName: string) => {
+	return new Error(
+		`Invalid syntax: string type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`,
+	);
+};
+
 // Main area
 const generatePrefix = (name: string) => name.startsWith('-') ? name : name.length > 1 ? `--${name}` : `-${name}`;
 
@@ -126,15 +158,15 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 		if (cfg.name === undefined) cfg.name = key;
 
 		if (cfg.name!.includes('=')) {
-			throw new Error(
-				`Brocli error: can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
+			throw new BroCliError(
+				`Can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
 			);
 		}
 
 		for (const alias of cfg.aliases) {
 			if (alias.includes('=')) {
-				throw new Error(
-					`Brocli error: can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
+				throw new BroCliError(
+					`Can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
 				);
 			}
 		}
@@ -154,8 +186,8 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 			if (!nameOccupier) continue;
 
-			throw new Error(
-				`Brocli error: can't define option '${cfg.name}': name is already in use by option '${storage[0]}'!`,
+			throw new BroCliError(
+				`Can't define option '${cfg.name}': name is already in use by option '${storage[0]}'!`,
 			);
 		}
 
@@ -165,10 +197,8 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 				if (!nameOccupier) continue;
 
-				throw new Error(
-					`Brocli error: can't define option '${cfg.name}': alias '${alias}' is already in use by option '${
-						storage[0]
-					}'!`,
+				throw new BroCliError(
+					`Can't define option '${cfg.name}': alias '${alias}' is already in use by option '${storage[0]}'!`,
 				);
 			}
 		}
@@ -178,8 +208,8 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 		storedNames[cfg.name!]!.forEach((name, idx) => {
 			if (storedNames[cfg.name!]!.findIndex((e) => e === name) === idx) return;
 
-			throw new Error(
-				`Brocli error: can't define option '${cfg.name}': duplicate aliases '${name}'!`,
+			throw new BroCliError(
+				`Can't define option '${cfg.name}': duplicate aliases '${name}'!`,
 			);
 		});
 
@@ -192,27 +222,34 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 >(command: RawCommand<TOpts>) => {
+	const reservedNames = ['--help', '-h'];
+
+	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
+
+	for (const name of allNames) {
+		const match = reservedNames.find((n) => n === name);
+		if (match) throw new BroCliError(`Can't define command ${command.name} - name '${match}' is reserved!`);
+	}
+
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
 	const cmd: Command = command as any;
 
 	cmd.options = processedOptions;
 
 	if (cmd.name.startsWith('-')) {
-		throw new Error(`Brocli error: can't define command '${cmd.name}' - command name can't start with '-'!`);
+		throw new BroCliError(`Can't define command '${cmd.name}' - command name can't start with '-'!`);
 	}
 
 	cmd.aliases?.forEach((a) => {
 		if (a.startsWith('-')) {
-			throw new Error(`Brocli error: can't define command '${cmd.name}' - command aliases can't start with '-'!`);
+			throw new BroCliError(`Can't define command '${cmd.name}' - command aliases can't start with '-'!`);
 		}
 	});
-
-	const allNames = cmd.aliases ? [cmd.name, ...cmd.aliases] : [cmd.name];
 
 	allNames.forEach((n, i) => {
 		const idx = allNames.findIndex((an) => an === n);
 
-		if (idx !== i) throw new Error(`Brocli error: can't define command '${cmd.name}' - duplicate alias '${n}'!`);
+		if (idx !== i) throw new BroCliError(`Can't define command '${cmd.name}' - duplicate alias '${n}'!`);
 	});
 
 	return cmd;
@@ -220,17 +257,27 @@ export const command = <
 
 const getCommand = (commands: Command[], args: string[]) => {
 	let index: number = -1;
+	let command: Command | undefined;
 
-	const command = commands.find((c) =>
-		args.find((arg, i) => {
+	for (let i = 0; i < args.length; ++i) {
+		const arg = args[i];
+		if (arg?.startsWith('-')) {
+			if (!arg.includes('=')) ++i;
+
+			continue;
+		}
+
+		command = commands.find((c) => {
 			const names = c.aliases ? [c.name, ...c.aliases] : [c.name];
 			const res = names.find((name) => name === arg);
 
 			if (res) index = i;
 
 			return res;
-		})
-	);
+		});
+
+		if (command) break;
+	}
 
 	return {
 		command,
@@ -238,13 +285,15 @@ const getCommand = (commands: Command[], args: string[]) => {
 	};
 };
 
-const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: string) => {
+const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: string, nextArg: string | undefined) => {
 	let data: OutputType = undefined;
 
 	const argSplit = arg.split('=');
+	const hasEq = arg.includes('=');
 
 	const namePart = argSplit.shift();
-	const dataPart = argSplit.join('=');
+	const dataPart = hasEq ? argSplit.join('=') : nextArg;
+	let skipNext = !hasEq;
 
 	const option = options.find(([optKey, { config: opt }]) => {
 		const names = [opt.name!, ...opt.aliases];
@@ -254,14 +303,25 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 				const match = names.find((name) => name === namePart);
 				if (!match) return false;
 
-				if (arg.includes('=')) {
-					throw new Error(
-						`Invalid syntax: boolean type argument '${opt.name}' must not have a value, pass it in the following format: ${opt.name}`,
-					);
+				let lcaseData = dataPart?.toLowerCase();
+
+				if (!hasEq && nextArg?.startsWith('-')) {
+					data = true;
+					skipNext = false;
+					return true;
 				}
 
-				data = true;
-				return true;
+				if (lcaseData === undefined || lcaseData === '' || lcaseData === 'true' || lcaseData === '1') {
+					data = true;
+					return true;
+				}
+
+				if (lcaseData === 'false' || lcaseData === '0') {
+					data = false;
+					return true;
+				}
+
+				throw invalidBooleanSyntax(match);
 			}
 
 			case 'string': {
@@ -269,10 +329,10 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 
 				if (!match) return false;
 
-				if (!arg.includes('=')) {
-					throw new Error(
-						`Invalid syntax: string type argument '${opt.name}' must have it's value passed in the following format: ${opt.name}=<value>`,
-					);
+				if (!hasEq) {
+					if (nextArg === undefined) throw invalidStringSyntax(match);
+
+					skipNext = true;
 				}
 
 				data = dataPart;
@@ -284,6 +344,7 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 
 	return {
 		data,
+		skipNext,
 		name: option?.[0],
 		option: option?.[1],
 	};
@@ -299,13 +360,18 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 	const missingRequiredArr: string[][] = [];
 	const unrecognizedArgsArr: string[] = [];
 
-	for (const arg of args) {
+	for (let i = 0; i < args.length; ++i) {
+		const arg = args[i]!;
+		const nextArg = args[i + 1];
+
 		const {
 			data,
 			name,
 			option,
-		} = parseArg(optEntries, arg);
+			skipNext,
+		} = parseArg(optEntries, arg, nextArg);
 		if (!option) unrecognizedArgsArr.push(arg.split('=')[0]!);
+		if (skipNext) ++i;
 
 		result[name!] = data;
 	}
@@ -316,14 +382,13 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 		if (option.isRequired && result[optKey] === undefined) missingRequiredArr.push([option.name!, ...option.aliases]);
 	}
 
-	if (missingRequiredArr.length) missingRequired(command, missingRequiredArr as [string[], ...string[][]]);
-	if (unrecognizedArgsArr.length) unrecognizedOptions(command, unrecognizedArgsArr as [string, ...string[]]);
+	if (missingRequiredArr.length) throw missingRequired(command, missingRequiredArr as [string[], ...string[][]]);
+	if (unrecognizedArgsArr.length) throw unrecognizedOptions(command, unrecognizedArgsArr as [string, ...string[]]);
 
 	return result;
 };
 
-// Default help command
-const helpCmd = (commands: Command[]) =>
+const helpCommand = (commands: Command[], helpHandler: HelpHandler, commandHelpHandler: CommandHelpHandler) =>
 	command({
 		name: 'help',
 		description: 'List commands or command details',
@@ -334,20 +399,18 @@ const helpCmd = (commands: Command[]) =>
 		handler: (options) => {
 			const { command } = options;
 
-			if (command === undefined) return help(commands);
+			if (command === undefined) return helpHandler(commands);
 
 			const cmd = commands.find((e) => e.name === command);
-			if (cmd) return cmdHelp(cmd);
-			return unknownCmd();
+			if (cmd) return commandHelpHandler(cmd);
+			return unknownCommand();
 		},
 	});
 
 const validateCommands = (commands: Command[]) => {
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
-	const cmds = commands.find((c) => c.name === 'help') ? commands : [helpCmd(commands), ...commands];
-
-	for (const cmd of cmds) {
+	for (const cmd of commands) {
 		const storageVals = Object.values(storedNames);
 
 		for (const storage of storageVals) {
@@ -356,7 +419,7 @@ const validateCommands = (commands: Command[]) => {
 			if (!nameOccupier) continue;
 
 			throw new Error(
-				`Brocli error: can't define command '${cmd.name}': name is already in use by command '${storage[0]}'!`,
+				`Can't define command '${cmd.name}': name is already in use by command '${storage[0]}'!`,
 			);
 		}
 
@@ -368,9 +431,7 @@ const validateCommands = (commands: Command[]) => {
 					if (!nameOccupier) continue;
 
 					throw new Error(
-						`Brocli error: can't define command '${cmd.name}': alias '${alias}' is already in use by command '${
-							storage[0]
-						}'!`,
+						`Can't define command '${cmd.name}': alias '${alias}' is already in use by command '${storage[0]}'!`,
 					);
 				}
 			}
@@ -381,7 +442,61 @@ const validateCommands = (commands: Command[]) => {
 			: [cmd.name];
 	}
 
-	return cmds;
+	return commands;
+};
+
+/**
+ * Separated for testing purposes
+ */
+export const rawCli = (commands: Command[], config: BroCliConfig) => {
+	let options: Record<string, OutputType> | undefined;
+	let cmd: RawCommand<any>;
+
+	const argSource = config?.argSource ?? process.argv;
+	const version = config?.version ?? '0.1.0';
+	const name = config?.name ?? '0.1.0';
+	const versionHelpHandler = config?.versionHelp ?? versionHelp;
+	const helpHandler = config?.help ?? help;
+	const commandHelpHandler = config?.commandHelp ?? commandHelp;
+
+	const rawCmds = validateCommands(commands);
+	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler, commandHelpHandler)];
+
+	let args = argSource.slice(2, argSource.length);
+	if (!args.length) return help(cmds);
+
+	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
+	if (helpIndex !== -1) {
+		let command: Command | undefined;
+		if (args[helpIndex + 1]?.startsWith('-')) {
+			const targetName = args[helpIndex + 1]!;
+
+			command = cmds.find((cmd) => {
+				const names = cmd.aliases ? [cmd.name, ...cmd.aliases] : [cmd.name];
+
+				return names.find((n) => n === targetName);
+			});
+		}
+
+		command = command ?? getCommand(cmds, args).command;
+
+		return command ? commandHelpHandler(command) : helpHandler(cmds);
+	}
+
+	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
+	if (helpIndex !== -1) {
+		return versionHelpHandler(name, version);
+	}
+
+	const { command, index } = getCommand(cmds, args);
+	if (!command) return unknownCommand();
+
+	args = [...args.slice(0, index), ...args.slice(index + 1, args.length)];
+	options = parseOptions(command, args);
+	cmd = command;
+
+	cmd.handler(options);
+	return undefined;
 };
 
 /**
@@ -391,21 +506,14 @@ const validateCommands = (commands: Command[]) => {
  *
  * @param argSource - source of cli arguments, optionally passed as a parameter for testing purposes and compatibility with custom environments
  */
-export const runCli = (commands: Command[], argSource: string[] = process.argv) => {
-	let options: Record<string, OutputType> | undefined;
-	let cmd: RawCommand<any>;
+export const runCli = (commands: Command[], config: BroCliConfig) => {
+	try {
+		rawCli(commands, config);
+	} catch (e) {
+		if (e instanceof BroCliError) throw e;
 
-	const cmds = validateCommands(commands);
+		console.log(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
 
-	let args = argSource.slice(2, argSource.length);
-
-	const { command, index } = getCommand(cmds, args);
-	if (!command) return unknownCmd();
-
-	args = [...args.slice(0, index), ...args.slice(index + 1, args.length)];
-	options = parseOptions(command, args);
-	cmd = command;
-
-	cmd.handler(options);
-	return undefined;
+		process.exit(1);
+	}
 };
