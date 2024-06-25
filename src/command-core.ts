@@ -331,11 +331,7 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 
 				if (!match) return false;
 
-				if (!hasEq) {
-					if (nextArg === undefined) throw invalidStringSyntax(match);
-
-					skipNext = true;
-				}
+				if (!hasEq && nextArg === undefined) throw invalidStringSyntax(match);
 
 				data = dataPart;
 
