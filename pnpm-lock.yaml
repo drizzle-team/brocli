@@ -17,12 +17,6 @@ importers:
       '@types/node':
         specifier: ^20.12.13
         version: 20.12.13
-      commander:
-        specifier: ^12.1.0
-        version: 12.1.0
-      commander-js:
-        specifier: 0.0.1-security
-        version: 0.0.1-security
       dprint:
         specifier: ^0.46.2
         version: 0.46.2
@@ -792,16 +786,9 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
-  commander-js@0.0.1-security:
-    resolution: {integrity: sha512-OW7fC8kIkcPSh2pOlrkadPk7rTHZdfx7nk/TUKuhdywP4XByYwQE8vu3N3yJMFcdL8Y6/n8cedXMuD2uXnXt0Q==}
-
   commander@10.0.1:
     resolution: {integrity: sha512-y4Mg2tXshplEbSGzx7amzPwKKOCGuoSRP/CjEdwwk0FOGlUbq6lKuoyDZTNZkmxHdJtp54hdfY/JUrdL7Xfdug==}
     engines: {node: '>=14'}
-
-  commander@12.1.0:
-    resolution: {integrity: sha512-Vw8qHK3bZM9y/P10u3Vib8o/DdkvA2OtPtZvD871QKjy74Wj1WSKFILMPRPSdUSx5RFK1arlJzEtA4PkFgnbuA==}
-    engines: {node: '>=18'}
 
   commander@4.1.1:
     resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
@@ -2118,11 +2105,7 @@ snapshots:
 
   color-name@1.1.4: {}
 
-  commander-js@0.0.1-security: {}
-
   commander@10.0.1: {}
-
-  commander@12.1.0: {}
 
   commander@4.1.1: {}
 

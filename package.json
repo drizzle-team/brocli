@@ -27,8 +27,6 @@
 		"@arethetypeswrong/cli": "^0.15.3",
 		"@originjs/vite-plugin-commonjs": "^1.0.3",
 		"@types/node": "^20.12.13",
-		"commander": "^12.1.0",
-		"commander-js": "0.0.1-security",
 		"dprint": "^0.46.2",
 		"string-argv": "^0.3.2",
 		"tsup": "^8.1.0",
