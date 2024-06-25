@@ -6,7 +6,7 @@ Run CLI commands with fully typed handlers
 
 ### Defining options
 
-Start defining options using `string()` and `boolean` functions:  
+Start defining options using `string` and `boolean` functions:  
 
 ```Typescript
 import { string, boolean } from '@drizzle-team/brocli'
@@ -26,16 +26,16 @@ Initial builder functions:
 
 -   `string(name?: string)` - defines option as a string-type option which requires data to be passed as `--option=value`
     -   `name` - name by which option is passed in cli args  
-    If not specified, defaults to key of this option in `defineOptions`  
-    :warning: - must not contain `=` character and be unique per each `defineOptions()`  
+    If not specified, defaults to key of this option    
+    :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `string('-longname')`  
 
 
 -   `boolean(name?: string)` - defines option as a boolean-type option which requires data to be passed as `--option`  
     -   `name` - name by which option is passed in cli args  
-    If not specified, defaults to key of this option in `defineOptions`  
-    :warning: - must not contain `=` character and be unique per each `defineOptions()`  
+    If not specified, defaults to key of this option    
+    :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `boolean('-longname')`  
 
@@ -43,7 +43,7 @@ Extensions:
 
 -   `.alias(...aliases: string[])` - defines aliases for option  
      -   `aliases` - aliases by which option is passed in cli args  
-    :warning: - must not contain `=` character and be unique per each `defineOptions()`  
+    :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character alias - simply specify alias with it: `.alias('-longname')`  
 
@@ -153,13 +153,17 @@ commands.push(command({
 
 // And so on...
 
-runCli(commands)
+runCli(commands, {
+    name: 'my-program',
+    version: '1.0.0'
+})
 ```
 
-:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source as a second argument to `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.
+:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source to a second argument of `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.  
+:speech_balloon: - custom help and version output handlers can be passed to a second argument to replace default brocli outputs for those operations with your own.  
 
 ## CLI
 
 In `BroCLI`, command doesn't have to be the first argument, instead it may be contained in any order.  
-To make this possible, hovewer, string-type options are limited to `--option=value` syntax.  
+To make this possible, hovewer, option that's stated right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>`    
 Options are parsed in strict mode, meaning that having any unrecognized options will result in anerror.     
