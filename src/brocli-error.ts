@@ -5,7 +5,7 @@
  */
 export class BroCliError extends Error {
 	constructor(message: string | undefined) {
-		const errPrefix = 'Brocli error: ';
+		const errPrefix = 'BroCli error: ';
 		super(message === undefined ? message : `${errPrefix}${message}`);
 	}
 }

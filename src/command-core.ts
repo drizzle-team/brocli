@@ -104,7 +104,7 @@ const commandHelp = (command: Command) => {
 };
 
 const versionHelp = (name: string, version: string) => {
-	console.log(`${command} - ${version}`);
+	console.log(`${name} - ${version}`);
 };
 
 const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...string[][]]) => {
@@ -179,6 +179,15 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 	for (const [key, value] of cfgEntries) {
 		const cfg = value._.config;
 
+		const reservedNames = ['--help', '-h', '--version', '-v'];
+
+		const allNames = [cfg.name, ...cfg.aliases];
+
+		for (const name of allNames) {
+			const match = reservedNames.find((n) => n === name);
+			if (match) throw new BroCliError(`Can't define option ${cfg.name} - name '${match}' is reserved!`);
+		}
+
 		const storageVals = Object.values(storedNames);
 
 		for (const storage of storageVals) {
@@ -222,14 +231,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 >(command: RawCommand<TOpts>) => {
-	const reservedNames = ['--help', '-h'];
-
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
-
-	for (const name of allNames) {
-		const match = reservedNames.find((n) => n === name);
-		if (match) throw new BroCliError(`Can't define command ${command.name} - name '${match}' is reserved!`);
-	}
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
 	const cmd: Command = command as any;
@@ -454,7 +456,7 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
 
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version ?? '0.1.0';
-	const name = config?.name ?? '0.1.0';
+	const name = config?.name ?? 'brocli';
 	const versionHelpHandler = config?.versionHelp ?? versionHelp;
 	const helpHandler = config?.help ?? help;
 	const commandHelpHandler = config?.commandHelp ?? commandHelp;
@@ -469,27 +471,31 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
 	if (helpIndex !== -1) {
 		let command: Command | undefined;
 		if (args[helpIndex + 1]?.startsWith('-')) {
+			command = getCommand(cmds, args).command;
+		} else {
 			const targetName = args[helpIndex + 1]!;
+
+			console.warn(targetName);
 
 			command = cmds.find((cmd) => {
 				const names = cmd.aliases ? [cmd.name, ...cmd.aliases] : [cmd.name];
 
 				return names.find((n) => n === targetName);
 			});
-		}
 
-		command = command ?? getCommand(cmds, args).command;
+			command = command ?? getCommand(cmds, args).command;
+		}
 
 		return command ? commandHelpHandler(command) : helpHandler(cmds);
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
-	if (helpIndex !== -1) {
+	if (versionIndex !== -1) {
 		return versionHelpHandler(name, version);
 	}
 
 	const { command, index } = getCommand(cmds, args);
-	if (!command) return unknownCommand();
+	if (!command) throw unknownCommand();
 
 	args = [...args.slice(0, index), ...args.slice(index + 1, args.length)];
 	options = parseOptions(command, args);
