@@ -121,8 +121,6 @@ Parameters:
 
 -   `handler` - function, which will be executed in case of successful option parse  
 
-:speech_balloon: - `BroCLI` starts with having `help` command predefined, and despite the requirement for command names to be unique, `help` can actually be redefined so that your app could have it matching your output style instead that of this library's.  
-
 ### Running commands
 
 After defining commands, you're going to need to execute `runCli()` function to start command execution
