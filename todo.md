@@ -8,6 +8,9 @@
  - Update tests
  - CLI app research
 
+ - New discovery: fix --version \ --help behaviour when passed as arg
+ - list valid \ invalid commands for further discussion
+
  # Backlog
  - Add automatically typing handler creator function
  - `--help`- type help

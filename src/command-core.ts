@@ -450,7 +450,7 @@ const validateCommands = (commands: Command[]) => {
 /**
  * Separated for testing purposes
  */
-export const rawCli = (commands: Command[], config: BroCliConfig) => {
+export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 	let options: Record<string, OutputType> | undefined;
 	let cmd: RawCommand<any>;
 
@@ -468,7 +468,7 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
 	if (!args.length) return help(cmds);
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
-	if (helpIndex !== -1) {
+	if (helpIndex !== -1 && (helpIndex > 0 ? args[helpIndex - 1]?.startsWith('-') ? false : true : true)) {
 		let command: Command | undefined;
 		if (args[helpIndex + 1]?.startsWith('-')) {
 			command = getCommand(cmds, args).command;
@@ -488,7 +488,7 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
-	if (versionIndex !== -1) {
+	if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
 		return versionHelpHandler(name, version);
 	}
 
@@ -510,7 +510,7 @@ export const rawCli = (commands: Command[], config: BroCliConfig) => {
  *
  * @param argSource - source of cli arguments, optionally passed as a parameter for testing purposes and compatibility with custom environments
  */
-export const runCli = (commands: Command[], config: BroCliConfig) => {
+export const runCli = (commands: Command[], config?: BroCliConfig) => {
 	try {
 		rawCli(commands, config);
 	} catch (e) {

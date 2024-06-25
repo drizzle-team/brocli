@@ -1,14 +1,12 @@
-import { boolean, type Command, command, runCli, string, type TypeOf } from '@/index';
-import stringArgv from 'string-argv';
-import { beforeEach, describe, expect, expectTypeOf, vi } from 'vitest';
+import { rawCli as runCli } from '@/command-core';
+import { boolean, type Command, command, string, type TypeOf } from '@/index';
+import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 
 const getArgs = (...args: string[]) => [
 	process.argv[0]!, // executing application path
 	process.argv[1]!, // executed file path
 	...args,
 ];
-
-const fn = vi.fn;
 
 const storage = {
 	options: {} as Record<string, any>,
@@ -50,7 +48,7 @@ commands.push(command({
 const cFirstOps = {
 	flag: boolean().alias('f', 'fl').desc('Boolean value'),
 	string: string().alias('s', 'str').desc('String value'),
-	sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+	sFlag: boolean('stealth').alias('j', 'hb').desc('Boolean value').hidden(),
 	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 };
 
@@ -67,7 +65,7 @@ commands.push(command({
 const cSecondOps = {
 	flag: boolean().alias('f', 'fl').desc('Boolean value'),
 	string: string().alias('s', 'str').desc('String value'),
-	sFlag: boolean('stealth').alias('h', 'hb').desc('Boolean value').hidden(),
+	sFlag: boolean('stealth').alias('j', 'hb').desc('Boolean value').hidden(),
 	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 };
 
@@ -88,7 +86,7 @@ beforeEach(() => {
 
 describe('Option parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		runCli(commands, getArgs('generate', '--dialect=pg'));
+		runCli(commands, { argSource: getArgs('generate', '--dialect=pg') });
 
 		expect(storage).toStrictEqual({
 			command: 'generate',
@@ -111,18 +109,20 @@ describe('Option parsing tests', (it) => {
 	it('All options by name', async () => {
 		runCli(
 			commands,
-			getArgs(
-				'generate',
-				'--dialect=pg',
-				'--schema=./schemapath.ts',
-				'--out=./outfile.ts',
-				'--name=Example migration',
-				'--breakpoints=breakpoints',
-				'--custom=custom value',
-				'--flag',
-				'--defFlag',
-				'--dbg',
-			),
+			{
+				argSource: getArgs(
+					'generate',
+					'--dialect=pg',
+					'--schema=./schemapath.ts',
+					'--out=./outfile.ts',
+					'--name=Example migration',
+					'--breakpoints=breakpoints',
+					'--custom=custom value',
+					'--flag',
+					'--defFlag',
+					'--dbg',
+				),
+			},
 		);
 
 		expect(storage).toStrictEqual({
@@ -146,19 +146,21 @@ describe('Option parsing tests', (it) => {
 	it('All options by alias', async () => {
 		runCli(
 			commands,
-			getArgs(
-				'generate',
-				'-dlc=pg',
-				'-s=./schemapath.ts',
-				'-o=./outfile.ts',
-				'-n=Example migration',
-				'--break=breakpoints',
-				'--cus=custom value',
-				'-f',
-				'-def',
-				'-ds=Not=Default=Value',
-				'-g',
-			),
+			{
+				argSource: getArgs(
+					'generate',
+					'-dlc=pg',
+					'-s=./schemapath.ts',
+					'-o=./outfile.ts',
+					'-n=Example migration',
+					'--break=breakpoints',
+					'--cus=custom value',
+					'-f',
+					'-def',
+					'-ds=Not=Default=Value',
+					'-g',
+				),
+			},
 		);
 
 		expect(storage).toStrictEqual({
@@ -180,29 +182,30 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		expect(() => runCli(commands, getArgs('generate'))).toThrowError(
+		expect(() => runCli(commands, { argSource: getArgs('generate') })).toThrowError(
 			new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
 		);
 	});
 
 	it('Unrecognized options', async () => {
-		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '--unknown-one', '-m'))).toThrowError(
-			new Error(`Unrecognized options for command 'generate': --unknown-one, -m`),
-		);
+		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '--unknown-one', '-m') }))
+			.toThrowError(
+				new Error(`Unrecognized options for command 'generate': --unknown-one`),
+			);
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '-def=somevalue'))).toThrowError(
+		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-def=somevalue') })).toThrowError(
 			new Error(
-				`Invalid syntax: boolean type argument '--defFlag' must not have a value, pass it in the following format: --defFlag`,
+				`Invalid syntax: boolean type argument '-def' must have it's value passed in the following formats: -def=<value> | -def <value> | -def.\nAllowed values: true, false, 0, 1`,
 			),
 		);
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		expect(() => runCli(commands, getArgs('generate', '--dialect=pg', '-ds'))).toThrowError(
+		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-ds') })).toThrowError(
 			new Error(
-				`Invalid syntax: string type argument '--defString' must have it's value passed in the following format: --defString=<value>`,
+				`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
 			),
 		);
 	});
@@ -210,7 +213,7 @@ describe('Option parsing tests', (it) => {
 
 describe('Command parsing tests', (it) => {
 	it('Get the right command, no args', async () => {
-		runCli(commands, getArgs('c-first'));
+		runCli(commands, { argSource: getArgs('c-first') });
 
 		expect(storage).toStrictEqual({
 			command: 'c-first',
@@ -224,7 +227,9 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command before args', async () => {
-		runCli(commands, getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'));
+		runCli(commands, {
+			argSource: getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'),
+		});
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -238,7 +243,9 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command between args', async () => {
-		runCli(commands, getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'));
+		runCli(commands, {
+			argSource: getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'),
+		});
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -252,7 +259,9 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command after args', async () => {
-		runCli(commands, getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'));
+		runCli(commands, {
+			argSource: getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'),
+		});
 
 		expect(storage).toStrictEqual({
 			command: 'c-second',
@@ -266,7 +275,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		expect(() => runCli(commands, getArgs('unknown', '--somearg=somevalue', '-f'))).toThrowError(
+		expect(() => runCli(commands, { argSource: getArgs('unknown', '--somearg=somevalue', '-f') })).toThrowError(
 			new Error(`Unable to recognize any of the commands.\nUse 'help' command to list all commands.`),
 		);
 	});
