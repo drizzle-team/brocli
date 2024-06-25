@@ -405,7 +405,7 @@ const helpCommand = (commands: Command[], helpHandler: HelpHandler, commandHelpH
 
 			const cmd = commands.find((e) => e.name === command);
 			if (cmd) return commandHelpHandler(cmd);
-			return unknownCommand();
+			helpHandler(commands);
 		},
 	});
 
