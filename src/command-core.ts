@@ -517,3 +517,8 @@ export const runCli = (commands: Command[], config?: BroCliConfig) => {
 		process.exit(1);
 	}
 };
+
+export const handler = <TOpts extends Record<string, GenericBuilderInternals>>(
+	options: TOpts,
+	handler: CommandHandler<TOpts>,
+) => handler;

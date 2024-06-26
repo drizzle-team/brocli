@@ -9,7 +9,7 @@ export type {
 	RawCommand,
 	VersionHelpHandler,
 } from './command-core';
-export { command, runCli } from './command-core';
+export { command, handler, runCli } from './command-core';
 export type {
 	AssignConfigName,
 	BuilderConfig,

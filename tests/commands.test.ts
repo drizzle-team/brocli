@@ -1,6 +1,6 @@
 import { rawCli as runCli } from '@/command-core';
-import { boolean, type Command, command, string, type TypeOf } from '@/index';
-import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import { boolean, type Command, command, handler, string, type TypeOf } from '@/index';
+import { beforeEach, describe, expect, expectTypeOf, vi } from 'vitest';
 
 const getArgs = (...args: string[]) => [
 	process.argv[0]!, // executing application path
@@ -478,6 +478,39 @@ describe('Command definition tests', (it) => {
 			})
 		).toThrowError();
 	});
+
+	it('Using handler function', () => {
+		const opts = {
+			flag: boolean().alias('f', 'fl').desc('Boolean value'),
+			string: string().alias('s', 'str').desc('String value'),
+			sFlag: boolean('stealth').alias('j', 'hb').desc('Boolean value').hidden(),
+			sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
+		};
+
+		const cmd = command({
+			name: 'c-tenth',
+			aliases: ['c10'],
+			options: opts,
+			handler: handler(opts, (options) => {
+				storage.command = 'c-tenth';
+				storage.options = options;
+			}),
+		});
+
+		runCli([cmd], {
+			argSource: getArgs('c-tenth', '-f', '-j', 'false', '--string=strval'),
+		});
+
+		expect(storage).toStrictEqual({
+			command: 'c-tenth',
+			options: {
+				flag: true,
+				sFlag: false,
+				string: 'strval',
+				sString: undefined,
+			},
+		});
+	});
 });
 
 describe('Type tests', (it) => {
@@ -515,5 +548,27 @@ describe('Type tests', (it) => {
 		};
 
 		expectTypeOf<GenerateOptions>().toEqualTypeOf<ExpectedType>();
+	});
+
+	it("'handler' function type inferrence test", () => {
+		const hdl = handler(generateOps, () => '');
+
+		type HandlerOpts = typeof hdl extends (options: infer Options) => any ? Options : never;
+
+		type ExpectedType = {
+			dialect: string;
+			schema: string | undefined;
+			out: string | undefined;
+			name: string | undefined;
+			breakpoints: string | undefined;
+			custom: string | undefined;
+			config: string;
+			flag: boolean | undefined;
+			defFlag: boolean;
+			defString: string;
+			debug: boolean | undefined;
+		};
+
+		expectTypeOf<HandlerOpts>().toEqualTypeOf<ExpectedType>();
 	});
 });
