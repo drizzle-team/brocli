@@ -18,19 +18,10 @@ export type CommandHandler<
 	options: TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 ) => any;
 
-export type HelpHandler = (commands: Command[]) => any;
-
-export type CommandHelpHandler = (command: Command) => any;
-
-export type VersionHelpHandler = (name: string, version: string) => any;
-
 export type BroCliConfig = {
-	name?: string;
-	version?: string;
 	argSource?: string[];
-	help?: HelpHandler;
-	commandHelp?: CommandHelpHandler;
-	versionHelp?: VersionHelpHandler;
+	help?: string | Function;
+	version?: string | Function;
 };
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
@@ -45,6 +36,7 @@ export type RawCommand<
 	description?: string;
 	hidden?: boolean;
 	options?: TOpts;
+	help?: string | Function;
 	handler: CommandHandler<TOpts>;
 };
 
@@ -54,11 +46,12 @@ export type Command = {
 	description?: string;
 	hidden?: boolean;
 	options?: GenericProcessedOptions;
+	help?: string | Function;
 	handler: GenericCommandHandler;
 };
 
 // Message area
-const help = (commands: Command[]) => {
+const help = (commands: Command[]) => () => {
 	const cmds = commands.filter((cmd) => !cmd.hidden);
 
 	const tableCmds = cmds.map((cmd) => ({
@@ -76,35 +69,6 @@ const unknownCommand = () => {
 	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
 
 	return new Error(msg);
-};
-
-const commandHelp = (command: Command) => {
-	const options = command.options
-		? Object.values(command.options).filter((opt) => !opt.config?.isHidden).map(
-			({ config: opt }) => ({
-				name: opt.name,
-				aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
-				description: opt.description ?? '-',
-				type: opt.type,
-				required: opt.isRequired ? '✓' : '✗',
-			}),
-		)
-		: undefined;
-
-	console.log(
-		`Command: ${command.name}${command.aliases ? ` [${command.aliases.join(', ')}]` : ''}${
-			command.description ? ` - ${command.description}` : ''
-		}`,
-	);
-
-	if (!options?.length) return;
-
-	console.log('\nOptions:');
-	console.table(options);
-};
-
-const versionHelp = (name: string, version: string) => {
-	console.log(`${name} - ${version}`);
 };
 
 const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...string[][]]) => {
@@ -386,7 +350,12 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 	return result;
 };
 
-const helpCommand = (commands: Command[], helpHandler: HelpHandler, commandHelpHandler: CommandHelpHandler) =>
+const executeOrLog = async (target: string | Function | undefined) => {
+	if (!target || typeof target === 'string') console.log(target);
+	else await target();
+};
+
+const helpCommand = (commands: Command[], helpHandler: Function | string) =>
 	command({
 		name: 'help',
 		description: 'List commands or command details',
@@ -394,14 +363,23 @@ const helpCommand = (commands: Command[], helpHandler: HelpHandler, commandHelpH
 			command: string().alias('c', 'cmd').desc('List command details'),
 		},
 		hidden: true,
-		handler: (options) => {
+		handler: async (options) => {
 			const { command } = options;
 
-			if (command === undefined) return helpHandler(commands);
+			if (command === undefined) {
+				return typeof helpHandler === 'string'
+					? console.log(helpHandler)
+					: helpHandler(commands);
+			}
 
 			const cmd = commands.find((e) => e.name === command);
-			if (cmd) return commandHelpHandler(cmd);
-			helpHandler(commands);
+			if (cmd) {
+				return executeOrLog(cmd.help);
+			}
+
+			return typeof helpHandler === 'string'
+				? console.log(helpHandler)
+				: helpHandler(commands);
 		},
 	});
 
@@ -450,15 +428,12 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 	let options: Record<string, OutputType> | undefined;
 	let cmd: RawCommand<any>;
 
-	const argSource = config?.argSource ?? process.argv;
-	const version = config?.version ?? '0.1.0';
-	const name = config?.name ?? 'brocli';
-	const versionHelpHandler = config?.versionHelp ?? versionHelp;
-	const helpHandler = config?.help ?? help;
-	const commandHelpHandler = config?.commandHelp ?? commandHelp;
-
 	const rawCmds = validateCommands(commands);
-	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler, commandHelpHandler)];
+
+	const argSource = config?.argSource ?? process.argv;
+	const version = config?.version;
+	const helpHandler: string | Function = config?.help ?? help(rawCmds);
+	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
 	if (!args.length) return help(cmds);
@@ -480,12 +455,12 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 			command = command ?? getCommand(cmds, args).command;
 		}
 
-		return command ? commandHelpHandler(command) : helpHandler(cmds);
+		return command ? executeOrLog(command.help) : executeOrLog(helpHandler);
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
 	if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
-		return versionHelpHandler(name, version);
+		return executeOrLog(version);
 	}
 
 	const { command, index } = getCommand(cmds, args);

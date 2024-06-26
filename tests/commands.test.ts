@@ -513,6 +513,23 @@ describe('Command definition tests', (it) => {
 	});
 });
 
+// to-do
+// describe('Custom handler tests', (it) => {
+// 	const customHelp = vi.fn;
+// 	const customCmdHelp = vi.fn;
+// 	const customVersion = vi.fn;
+
+// 	it('Help', () => {
+// 	});
+
+// 	it('Command help', () => {
+// 	});
+
+// 	it('Version', () => {
+// 		runCli(commands);
+// 	});
+// });
+
 describe('Type tests', (it) => {
 	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),

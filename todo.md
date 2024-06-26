@@ -1,20 +1,20 @@
-# Immediate
- - Make lib commander's superset (only in arg parsing capabilities)
- - Make string args default syntax work if possible \ write reasons why it's impossible otherwise
- - Find Node API to generate args from string - v
- - Remove commander from deps before pushing
- - Test for function calls instead of storage - https://vitest.dev/api/mock.html
- - Add values to boolean - v
- - Update tests
- - CLI app research
-
  # Backlog
- - Add automatically typing handler creator function
- - `--help`- type help - v
- - `--help=commandname`- type help
- - New discovery: fix --version \ --help behaviour when passed as arg
- - list valid \ invalid commands for further discussion
 
+ - Test for function calls instead of storage - https://vitest.dev/api/mock.html
+ - Update tests
+ - Add automatically typing handler creator function
+ - New discovery: fix --version \ --help behaviour when passed as arg
+ - Explicit type erros (strings for types)
+
+ # Urgent
+ - replace commandHelp with on command helps +
+ - version & help to be string | callback | async callback +
+ - remove name +
+ - default version to undefined with no errors +
+
+ # next version
+ - subcommands (ref.: Turso CLI)
+ - positional args (disregard - and -- beginnings in args when parsing positionals)
 
  # Scenarios
 
