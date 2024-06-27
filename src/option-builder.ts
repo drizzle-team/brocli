@@ -188,10 +188,10 @@ export class OptionBuilderBase<
 		return this as any;
 	}
 
-	public default<TDefVal extends Exclude<TOutput, undefined>>(value: TDefVal): Omit<
+	public default<TDefVal extends TOutput extends string ? string : Exclude<TOutput, undefined>>(value: TDefVal): Omit<
 		OptionBuilderBase<
 			BuilderConfig,
-			Exclude<TOutput, undefined>,
+			Exclude<TOutput | TDefVal, undefined>,
 			TOmit | 'required' | 'default'
 		>,
 		TOmit | 'required' | 'default'
