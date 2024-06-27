@@ -4,7 +4,6 @@ export { command, handler, runCli } from './command-core';
 export type {
 	AssignConfigName,
 	BuilderConfig,
-	GenericBuilderConfig,
 	GenericBuilderInternals,
 	GenericBuilderInternalsFields,
 	GenericProcessedOptions,
@@ -15,4 +14,4 @@ export type {
 	Simplify,
 	TypeOf,
 } from './option-builder';
-export { boolean, string } from './option-builder';
+export { boolean, number, positional, string } from './option-builder';

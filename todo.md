@@ -15,6 +15,8 @@
  # next version
  - subcommands (ref.: Turso CLI)
  - positional args (disregard - and -- beginnings in args when parsing positionals)
+ - enums
+ - numbers with range and int\real vers
 
  # Scenarios
 

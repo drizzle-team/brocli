@@ -8,6 +8,7 @@ import {
 	string,
 	type TypeOf,
 } from './option-builder';
+import { isInt } from './util';
 
 // Type area
 export type CommandHandler<
@@ -104,6 +105,44 @@ const invalidStringSyntax = (matchedName: string) => {
 	);
 };
 
+const enumViolation = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
+	return new Error(``);
+};
+
+const enumViolationPos = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
+	return new Error(``);
+};
+
+const invalidNumberSyntax = (matchedName: string) => {
+	return new Error(
+		`Invalid syntax: number type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`,
+	);
+};
+
+const invalidNumberValue = (matchedName: string, data: string | undefined) => {
+	return new Error(
+		`Invalid value: number type argument '${matchedName}' expects a number as an input, got: ${data}`,
+	);
+};
+
+const invalidInteger = (matchedName: string, data: string | undefined) => {
+	return new Error(
+		`Invalid value: number type argument '${matchedName}' expects an integer as an input, got: ${data}`,
+	);
+};
+
+const belowMin = (matchedName: string, data: string | undefined, min: number) => {
+	return new Error(
+		`Invalid value: number type argument '${matchedName}' expects minimal value of ${min} as an input, got: ${data}`,
+	);
+};
+
+const aboveMax = (matchedName: string, data: string | undefined, max: number) => {
+	return new Error(
+		`Invalid value: number type argument '${matchedName}' expects maximal value of ${max} as an input, got: ${data}`,
+	);
+};
+
 // Main area
 const generatePrefix = (name: string) => name.startsWith('-') ? name : name.length > 1 ? `--${name}` : `-${name}`;
 
@@ -135,7 +174,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			}
 		}
 
-		cfg.name = generatePrefix(cfg.name);
+		cfg.name = cfg.type === 'positional' ? cfg.name : generatePrefix(cfg.name);
 
 		cfg.aliases = cfg.aliases.map((a) => generatePrefix(a));
 	}
@@ -251,7 +290,12 @@ const getCommand = (commands: Command[], args: string[]) => {
 	};
 };
 
-const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: string, nextArg: string | undefined) => {
+const parseArg = (
+	options: [string, GenericBuilderInternalsFields][],
+	positionals: [string, GenericBuilderInternalsFields][],
+	arg: string,
+	nextArg: string | undefined,
+) => {
 	let data: OutputType = undefined;
 
 	const argSplit = arg.split('=');
@@ -261,46 +305,83 @@ const parseArg = (options: [string, GenericBuilderInternalsFields][], arg: strin
 	const dataPart = hasEq ? argSplit.join('=') : nextArg;
 	let skipNext = !hasEq;
 
+	if (!arg.startsWith('-')) {
+		if (!positionals.length) return {};
+
+		const pos = positionals.shift()!;
+
+		if (pos[1].config.enumVals && !pos[1].config.enumVals.find((val) => val === dataPart)) {
+			throw enumViolationPos(pos[1].config.name!, arg, pos[1].config.enumVals);
+		}
+
+		data = arg;
+
+		return {
+			data,
+			skipNext: false,
+			name: pos[0],
+			option: pos[1],
+		};
+	}
+
 	const option = options.find(([optKey, { config: opt }]) => {
 		const names = [opt.name!, ...opt.aliases];
 
-		switch (opt.type) {
-			case 'boolean': {
-				const match = names.find((name) => name === namePart);
-				if (!match) return false;
+		if (opt.type === 'boolean') {
+			const match = names.find((name) => name === namePart);
+			if (!match) return false;
 
-				let lcaseData = dataPart?.toLowerCase();
+			let lcaseData = dataPart?.toLowerCase();
 
-				if (!hasEq && nextArg?.startsWith('-')) {
-					data = true;
-					skipNext = false;
-					return true;
-				}
-
-				if (lcaseData === undefined || lcaseData === '' || lcaseData === 'true' || lcaseData === '1') {
-					data = true;
-					return true;
-				}
-
-				if (lcaseData === 'false' || lcaseData === '0') {
-					data = false;
-					return true;
-				}
-
-				throw invalidBooleanSyntax(match);
+			if (!hasEq && nextArg?.startsWith('-')) {
+				data = true;
+				skipNext = false;
+				return true;
 			}
 
-			case 'string': {
-				const match = names.find((name) => name === namePart);
+			if (lcaseData === undefined || lcaseData === '' || lcaseData === 'true' || lcaseData === '1') {
+				data = true;
+				return true;
+			}
 
-				if (!match) return false;
+			if (lcaseData === 'false' || lcaseData === '0') {
+				data = false;
+				return true;
+			}
 
+			throw invalidBooleanSyntax(match);
+		} else {
+			const match = names.find((name) => name === namePart);
+
+			if (!match) return false;
+
+			if (opt.type === 'string') {
 				if (!hasEq && nextArg === undefined) throw invalidStringSyntax(match);
+
+				if (opt.enumVals && !opt.enumVals.find((val) => val === dataPart)) {
+					throw enumViolation(match, dataPart, opt.enumVals);
+				}
 
 				data = dataPart;
 
 				return true;
 			}
+
+			if (!hasEq && nextArg === undefined) throw invalidNumberSyntax(match);
+
+			const numData = Number(dataPart);
+
+			if (isNaN(numData)) throw invalidNumberValue(match, dataPart);
+
+			if (opt.isInt && !isInt(numData)) throw invalidInteger(match, dataPart);
+
+			if (opt.minVal !== undefined && numData < opt.minVal) throw belowMin(match, dataPart, opt.minVal);
+
+			if (opt.maxVal !== undefined && numData > opt.maxVal) throw aboveMax(match, dataPart, opt.maxVal);
+
+			data = dataPart;
+
+			return true;
 		}
 	});
 
@@ -317,6 +398,9 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 
 	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>);
 
+	const nonPositionalEntries = optEntries.filter(([key, opt]) => opt.config.type !== 'positional');
+	const positionalEntries = optEntries.filter(([key, opt]) => opt.config.type === 'positional');
+
 	const result: Record<string, OutputType> = {};
 
 	const missingRequiredArr: string[][] = [];
@@ -331,7 +415,7 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 			name,
 			option,
 			skipNext,
-		} = parseArg(optEntries, arg, nextArg);
+		} = parseArg(nonPositionalEntries, positionalEntries, arg, nextArg);
 		if (!option) unrecognizedArgsArr.push(arg.split('=')[0]!);
 		if (skipNext) ++i;
 
