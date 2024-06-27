@@ -2,7 +2,7 @@
 	"name": "@drizzle-team/brocli",
 	"type": "module",
 	"author": "Drizzle Team",
-	"version": "0.2.2",
+	"version": "0.2.3",
 	"description": "Typed CLI command runner",
 	"license": "Apache-2.0",
 	"sideEffects": false,
@@ -26,6 +26,7 @@
 	"devDependencies": {
 		"@arethetypeswrong/cli": "^0.15.3",
 		"@originjs/vite-plugin-commonjs": "^1.0.3",
+		"@types/clone": "^2.1.4",
 		"@types/node": "^20.12.13",
 		"dprint": "^0.46.2",
 		"tsup": "^8.1.0",
@@ -51,5 +52,8 @@
 			"types": "./index.d.ts",
 			"default": "./index.js"
 		}
+	},
+	"dependencies": {
+		"clone": "^2.1.2"
 	}
 }

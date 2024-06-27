@@ -31,7 +31,7 @@ const generateOps = {
 	debug: boolean('dbg').alias('g').hidden(),
 };
 
-const generateHandler = (options: TypeOf<typeof generateOps>) => {
+const generateHandler = async (options: TypeOf<typeof generateOps>) => {
 	storage.options = options;
 	storage.command = 'generate';
 };
@@ -55,7 +55,7 @@ const cFirstOps = {
 commands.push(command({
 	name: 'c-first',
 	options: cFirstOps,
-	handler: (options) => {
+	handler: async (options) => {
 		storage.options = options;
 		storage.command = 'c-first';
 	},
@@ -86,7 +86,7 @@ beforeEach(() => {
 
 describe('Option parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		runCli(commands, { argSource: getArgs('generate', '--dialect=pg') });
+		await runCli(commands, { argSource: getArgs('generate', '--dialect=pg') });
 
 		expect(storage).toStrictEqual({
 			command: 'generate',
@@ -107,7 +107,7 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('All options by name', async () => {
-		runCli(
+		await runCli(
 			commands,
 			{
 				argSource: getArgs(
@@ -146,7 +146,7 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('All options by alias', async () => {
-		runCli(
+		await runCli(
 			commands,
 			{
 				argSource: getArgs(
@@ -186,38 +186,46 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		expect(() => runCli(commands, { argSource: getArgs('generate') })).toThrowError(
+		await expect(async () => await runCli(commands, { argSource: getArgs('generate') })).rejects.toThrowError(
 			new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
 		);
 	});
 
 	it('Unrecognized options', async () => {
-		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '--unknown-one', '-m') }))
+		await expect(async () =>
+			await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '--unknown-one', '-m') })
+		)
+			.rejects
 			.toThrowError(
 				new Error(`Unrecognized options for command 'generate': --unknown-one`),
 			);
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-def=somevalue') })).toThrowError(
-			new Error(
-				`Invalid syntax: boolean type argument '-def' must have it's value passed in the following formats: -def=<value> | -def <value> | -def.\nAllowed values: true, false, 0, 1`,
-			),
-		);
+		await expect(async () =>
+			await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-def=somevalue') })
+		)
+			.rejects
+			.toThrowError(
+				new Error(
+					`Invalid syntax: boolean type argument '-def' must have it's value passed in the following formats: -def=<value> | -def <value> | -def.\nAllowed values: true, false, 0, 1`,
+				),
+			);
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		expect(() => runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-ds') })).toThrowError(
-			new Error(
-				`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
-			),
-		);
+		await expect(async () => await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-ds') })).rejects
+			.toThrowError(
+				new Error(
+					`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
+				),
+			);
 	});
 });
 
 describe('Command parsing tests', (it) => {
 	it('Get the right command, no args', async () => {
-		runCli(commands, { argSource: getArgs('c-first') });
+		await runCli(commands, { argSource: getArgs('c-first') });
 
 		expect(storage).toStrictEqual({
 			command: 'c-first',
@@ -231,7 +239,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command before args', async () => {
-		runCli(commands, {
+		await runCli(commands, {
 			argSource: getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'),
 		});
 
@@ -247,7 +255,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command between args', async () => {
-		runCli(commands, {
+		await runCli(commands, {
 			argSource: getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'),
 		});
 
@@ -263,7 +271,7 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Get the right command, command after args', async () => {
-		runCli(commands, {
+		await runCli(commands, {
 			argSource: getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'),
 		});
 
@@ -279,9 +287,11 @@ describe('Command parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		expect(() => runCli(commands, { argSource: getArgs('unknown', '--somearg=somevalue', '-f') })).toThrowError(
-			new Error(`Unable to recognize any of the commands.\nUse 'help' command to list all commands.`),
-		);
+		await expect(async () => await runCli(commands, { argSource: getArgs('unknown', '--somearg=somevalue', '-f') }))
+			.rejects
+			.toThrowError(
+				new Error(`Unable to recognize any of the commands.\nUse 'help' command to list all commands.`),
+			);
 	});
 });
 
@@ -393,50 +403,50 @@ describe('Option definition tests', (it) => {
 
 describe('Command definition tests', (it) => {
 	it('Duplicate names', async () => {
-		expect(() => {
+		await expect(async () => {
 			const cmd = command({
 				name: 'c-first',
 				handler: () => '',
 			});
 
-			runCli([...commands, cmd]);
-		}).toThrowError();
+			await runCli([...commands, cmd]);
+		}).rejects.toThrowError();
 	});
 
 	it('Duplicate aliases', async () => {
-		expect(() => {
+		await expect(async () => {
 			const cmd = command({
 				name: 'c-third',
 				aliases: ['g'],
 				handler: () => '',
 			});
 
-			runCli([...commands, cmd]);
-		}).toThrowError();
+			await runCli([...commands, cmd]);
+		}).rejects.toThrowError();
 	});
 
 	it('Name repeats alias', async () => {
-		expect(() => {
+		await expect(async () => {
 			const cmd = command({
 				name: 'gen',
 				aliases: ['c4'],
 				handler: () => '',
 			});
 
-			runCli([...commands, cmd]);
-		}).toThrowError();
+			await runCli([...commands, cmd]);
+		}).rejects.toThrowError();
 	});
 
 	it('Alias repeats name', async () => {
-		expect(() => {
+		await expect(async () => {
 			const cmd = command({
 				name: 'c-fifth',
 				aliases: ['generate'],
 				handler: () => '',
 			});
 
-			runCli([...commands, cmd]);
-		}).toThrowError();
+			await runCli([...commands, cmd]);
+		}).rejects.toThrowError();
 	});
 
 	it('Duplicate names in same command', async () => {
@@ -479,7 +489,7 @@ describe('Command definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Using handler function', () => {
+	it('Using handler function', async () => {
 		const opts = {
 			flag: boolean().alias('f', 'fl').desc('Boolean value'),
 			string: string().alias('s', 'str').desc('String value'),
@@ -497,7 +507,7 @@ describe('Command definition tests', (it) => {
 			}),
 		});
 
-		runCli([cmd], {
+		await runCli([cmd], {
 			argSource: getArgs('c-tenth', '-f', '-j', 'false', '--string=strval'),
 		});
 

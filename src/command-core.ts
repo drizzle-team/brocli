@@ -1,3 +1,4 @@
+import clone from 'clone';
 import { BroCliError } from './brocli-error';
 import {
 	type GenericBuilderInternals,
@@ -106,11 +107,19 @@ const invalidStringSyntax = (matchedName: string) => {
 };
 
 const enumViolation = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
-	return new Error(``);
+	return new Error(
+		`Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
+			values.join(', ')
+		}; Received: ${data}`,
+	);
 };
 
 const enumViolationPos = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
-	return new Error(``);
+	return new Error(
+		`Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
+			values.join(', ')
+		}; Received: ${data}`,
+	);
 };
 
 const invalidNumberSyntax = (matchedName: string) => {
@@ -149,11 +158,13 @@ const generatePrefix = (name: string) => name.startsWith('-') ? name : name.leng
 const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInternals>>(
 	config: TOptionConfig,
 ): ProcessedOptions<TOptionConfig> => {
+	const cloned = clone(config);
+
 	const entries: [string, GenericBuilderInternalsFields][] = [];
 
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
-	const cfgEntries = Object.entries(config);
+	const cfgEntries = Object.entries(cloned);
 
 	for (const [key, value] of cfgEntries) {
 		const cfg = value._.config;
@@ -468,9 +479,10 @@ const helpCommand = (commands: Command[], helpHandler: Function | string) =>
 	});
 
 const validateCommands = (commands: Command[]) => {
+	const cloned = clone(commands);
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
-	for (const cmd of commands) {
+	for (const cmd of cloned) {
 		const storageVals = Object.values(storedNames);
 
 		for (const storage of storageVals) {
@@ -502,13 +514,13 @@ const validateCommands = (commands: Command[]) => {
 			: [cmd.name];
 	}
 
-	return commands;
+	return cloned;
 };
 
 /**
  * Separated for testing purposes
  */
-export const rawCli = (commands: Command[], config?: BroCliConfig) => {
+export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	let options: Record<string, OutputType> | undefined;
 	let cmd: RawCommand<any>;
 
@@ -520,7 +532,7 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
-	if (!args.length) return executeOrLog(helpHandler);
+	if (!args.length) return await executeOrLog(helpHandler);
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 	if (helpIndex !== -1 && (helpIndex > 0 ? args[helpIndex - 1]?.startsWith('-') ? false : true : true)) {
@@ -539,7 +551,7 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 			command = command ?? getCommand(cmds, args).command;
 		}
 
-		return command ? executeOrLog(command.help) : executeOrLog(helpHandler);
+		return command ? await executeOrLog(command.help) : await executeOrLog(helpHandler);
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
@@ -554,7 +566,7 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 	options = parseOptions(command, args);
 	cmd = command;
 
-	cmd.handler(options);
+	await cmd.handler(options);
 	return undefined;
 };
 
@@ -565,9 +577,9 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
  *
  * @param argSource - source of cli arguments, optionally passed as a parameter for testing purposes and compatibility with custom environments
  */
-export const runCli = (commands: Command[], config?: BroCliConfig) => {
+export const runCli = async (commands: Command[], config?: BroCliConfig) => {
 	try {
-		rawCli(commands, config);
+		await rawCli(commands, config);
 	} catch (e) {
 		if (e instanceof BroCliError) throw e;
 
