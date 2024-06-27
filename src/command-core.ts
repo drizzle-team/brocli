@@ -520,7 +520,7 @@ export const rawCli = (commands: Command[], config?: BroCliConfig) => {
 	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
-	if (!args.length) return help(cmds);
+	if (!args.length) return executeOrLog(helpHandler);
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 	if (helpIndex !== -1 && (helpIndex > 0 ? args[helpIndex - 1]?.startsWith('-') ? false : true : true)) {

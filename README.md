@@ -6,14 +6,16 @@ Run CLI commands with fully typed handlers
 
 ### Defining options
 
-Start defining options using `string` and `boolean` functions:  
+Start defining options using `string`, `number`, `boolean` and `positional`functions:  
 
 ```Typescript
-import { string, boolean } from '@drizzle-team/brocli'
+import { string, boolean, number, positional } from '@drizzle-team/brocli'
 
 const commandOptions = {
     opt1: string(),
     opt2: boolean('flag').alias('f'),
+    opt3: number().int(),
+    opt4: positional().enum('one', 'two')
     // And so on... 
 }
 ```
@@ -24,13 +26,19 @@ Keys of the object passed to the object storing options determine to which keys 
 
 Initial builder functions:
 
--   `string(name?: string)` - defines option as a string-type option which requires data to be passed as `--option=value`
+-   `string(name?: string)` - defines option as a string-type option which requires data to be passed as `--option=value` or `--option value`    
     -   `name` - name by which option is passed in cli args  
     If not specified, defaults to key of this option    
     :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `string('-longname')`  
 
+-   `number(name?: string)` - defines option as a number-type option which requires data to be passed as `--option=value` or `--option value`    
+    -   `name` - name by which option is passed in cli args  
+    If not specified, defaults to key of this option    
+    :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
+    :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
+    If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `string('-longname')`  
 
 -   `boolean(name?: string)` - defines option as a boolean-type option which requires data to be passed as `--option`  
     -   `name` - name by which option is passed in cli args  
@@ -39,6 +47,9 @@ Initial builder functions:
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `boolean('-longname')`  
 
+-   `positional()` - defines option as a positional-type option which requires data to be passed after a command as `command value`    
+    :warning: - does not consume options and data that starts with `-`
+    
 Extensions: 
 
 -   `.alias(...aliases: string[])` - defines aliases for option  
@@ -55,6 +66,19 @@ Extensions:
 
 -   `.hidden()` - sets option as hidden - option will be omitted from being displayed in `help` command
 
+-   `.enum(values: [string, ...string[]])` - limits values of string to one of specified here  
+    -   `values` - allowed enum values  
+    :warning: - does not test default value, will add it to the output type instead  
+
+-   `.int()` - ensures that number is an integer  
+
+-   `.min(value: number)` - specified minimal allowed value for numbers  
+    -   `value` - minimal allowed value  
+    :warning: - does not limit defaults
+
+-   `.max(value: number)` - specified maximal allowed value for numbers  
+    -   `value` - maximal allowed value  
+    :warning: - does not limit defaults
 
 ### Creating handlers
 
@@ -74,6 +98,22 @@ const commandOptions = {
 export const commandHandler = (options: TypeOf<typeof commandOptions>) => {
     // Your logic goes here...
 }
+```
+
+Or by using `handler(options, myHandler () => {...})`
+
+```Typescript
+import { string, boolean, handler } from '@drizzle-team/brocli'
+
+const commandOptions = {
+    opt1: string(),
+    opt2: boolean('flag').alias('f'),
+    // And so on... 
+}
+
+export const commandHandler = handler(commandOptions, (options) => {
+    // Your logic goes here...
+});
 ```
 
 ### Defining commands
@@ -102,6 +142,7 @@ commands.push(command({
     hidden: false,
     options: commandOptions,
     handler: commandHandler,
+    help: () => 'This command works like this: ...'
 }));
 ```
 
@@ -120,6 +161,8 @@ Parameters:
 -   `options` - object containing command options created using `string()` and `boolean()` functions  
 
 -   `handler` - function, which will be executed in case of successful option parse  
+
+-   `help` - function or string, which will be executed or printed when help is called for this command
 
 ### Running commands
 
@@ -153,15 +196,19 @@ commands.push(command({
 
 runCli(commands, {
     name: 'my-program',
-    version: '1.0.0'
+    version: '1.0.0',
+    help: () => {
+        console.log('Command list:');
+        commands.forEach(c => console.log('This command does ... and has options ...'));
+    }
 })
 ```
 
 :speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source to a second argument of `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.  
-:speech_balloon: - custom help and version output handlers can be passed to a second argument to replace default brocli outputs for those operations with your own.  
+:speech_balloon: - custom help and version output handlers or strings can be passed to a second argument to replace default brocli outputs for those operations with your own.  
 
 ## CLI
 
 In `BroCLI`, command doesn't have to be the first argument, instead it may be contained in any order.  
 To make this possible, hovewer, option that's stated right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>`    
-Options are parsed in strict mode, meaning that having any unrecognized options will result in anerror.     
+Options are parsed in strict mode, meaning that having any unrecognized options will result in an error.     
