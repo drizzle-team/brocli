@@ -22,7 +22,7 @@ export class OptionBuilderBase<
 	TBuilderConfig extends BuilderConfig = BuilderConfig,
 	TOutput extends OutputType = string,
 	TOmit extends string = '',
-	TDefault extends OutputType = undefined,
+	TEnums extends string | undefined = undefined,
 > {
 	public _: {
 		config: TBuilderConfig;
@@ -188,14 +188,22 @@ export class OptionBuilderBase<
 		return this as any;
 	}
 
-	public default<TDefVal extends TOutput extends string ? string : Exclude<TOutput, undefined>>(value: TDefVal): Omit<
+	public default<TDefVal extends TEnums extends undefined ? Exclude<TOutput, undefined> : TEnums>(value: TDefVal): Omit<
 		OptionBuilderBase<
 			BuilderConfig,
-			Exclude<TOutput | TDefVal, undefined>,
-			TOmit | 'required' | 'default'
+			Exclude<TOutput, undefined>,
+			TOmit | 'enum' | 'required' | 'default',
+			TEnums
 		>,
-		TOmit | 'required' | 'default'
+		TOmit | 'enum' | 'required' | 'default'
 	> {
+		const enums = this.config().enumVals;
+		if (enums && !enums.find((v) => value === v)) {
+			throw new Error(
+				`Option enums [ ${enums.join(', ')} ] are incompatible with default value ${value}`,
+			);
+		}
+
 		this.config().default = value;
 
 		return this as any;
@@ -204,11 +212,18 @@ export class OptionBuilderBase<
 	public enum<TValues extends [string, ...string[]]>(...values: TValues): Omit<
 		OptionBuilderBase<
 			BuilderConfig,
-			Exclude<TOutput | TDefault, string> | TValues[number],
-			TOmit | 'enum'
+			TValues[number],
+			TOmit | 'enum',
+			TValues[number]
 		>,
 		TOmit | 'enum'
 	> {
+		const defaultVal = this.config().default;
+		if (defaultVal !== undefined && !values.find((v) => defaultVal === v)) {
+			throw new Error(
+				`Option enums [ ${values.join(', ')} ] are incompatible with default value ${defaultVal}`,
+			);
+		}
 		this.config().enumVals = values;
 
 		return this as any;

@@ -68,7 +68,6 @@ Extensions:
 
 -   `.enum(values: [string, ...string[]])` - limits values of string to one of specified here  
     -   `values` - allowed enum values  
-    :warning: - does not test default value, will add it to the output type instead  
 
 -   `.int()` - ensures that number is an integer  
 
