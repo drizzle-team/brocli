@@ -1,10 +1,12 @@
 import clone from 'clone';
 import { BroCliError } from './brocli-error';
+import { defaultTheme } from './help-themes';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
 	GenericProcessedOptions,
 	type OutputType,
+	positional,
 	type ProcessedOptions,
 	string,
 	type TypeOf,
@@ -12,6 +14,8 @@ import {
 import { isInt } from './util';
 
 // Type area
+export type HelpHandler = (calledFor: Command | Command[]) => any;
+
 export type CommandHandler<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
@@ -22,7 +26,7 @@ export type CommandHandler<
 
 export type BroCliConfig = {
 	argSource?: string[];
-	help?: string | Function;
+	help?: HelpHandler;
 	version?: string | Function;
 };
 
@@ -33,13 +37,13 @@ export type RawCommand<
 		| Record<string, GenericBuilderInternals>
 		| undefined,
 > = {
-	name: string;
+	name?: string;
 	aliases?: [string, ...string[]];
 	description?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
-	handler: CommandHandler<TOpts>;
+	handler?: CommandHandler<TOpts>;
 };
 
 export type Command = {
@@ -53,20 +57,6 @@ export type Command = {
 };
 
 // Message area
-const help = (commands: Command[]) => () => {
-	const cmds = commands.filter((cmd) => !cmd.hidden);
-
-	const tableCmds = cmds.map((cmd) => ({
-		name: cmd.name,
-		aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
-		description: cmd.description ?? '-',
-	}));
-
-	console.log(`Here's the list of all available commands:`);
-	console.table(tableCmds);
-	console.log('To read the details about any particular command type: help --command=<command-name>');
-};
-
 const unknownCommand = () => {
 	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
 
@@ -171,6 +161,8 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 		if (cfg.name === undefined) cfg.name = key;
 
+		if (cfg.type === 'positional') continue;
+
 		if (cfg.name!.includes('=')) {
 			throw new BroCliError(
 				`Can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
@@ -185,13 +177,15 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			}
 		}
 
-		cfg.name = cfg.type === 'positional' ? cfg.name : generatePrefix(cfg.name);
+		cfg.name = generatePrefix(cfg.name);
 
 		cfg.aliases = cfg.aliases.map((a) => generatePrefix(a));
 	}
 
 	for (const [key, value] of cfgEntries) {
 		const cfg = value._.config;
+
+		if (cfg.type === 'positional') continue;
 
 		const reservedNames = ['--help', '-h', '--version', '-v'];
 
@@ -251,6 +245,14 @@ export const command = <
 	const cmd: Command = command as any;
 
 	cmd.options = processedOptions;
+
+	cmd.name = cmd.name ?? cmd.aliases?.shift();
+
+	if (!cmd.name) throw new BroCliError(`Can't define command without name!`);
+
+	cmd.aliases = cmd.aliases?.length ? cmd.aliases : undefined;
+
+	if (!cmd.handler) throw new BroCliError(`Can't define command '${cmd.name}' - command must have a handler!`);
 
 	if (cmd.name.startsWith('-')) {
 		throw new BroCliError(`Can't define command '${cmd.name}' - command name can't start with '-'!`);
@@ -450,31 +452,29 @@ const executeOrLog = async (target: string | Function | undefined) => {
 	else await target();
 };
 
-const helpCommand = (commands: Command[], helpHandler: Function | string) =>
+const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
 	command({
 		name: 'help',
 		description: 'List commands or command details',
 		options: {
-			command: string().alias('c', 'cmd').desc('List command details'),
+			command: string().alias('c', 'cmd').desc('Target command'),
+			pos: positional().desc('Target command'),
 		},
 		hidden: true,
 		handler: async (options) => {
-			const { command } = options;
+			const { command, pos } = options;
 
-			if (command === undefined) {
-				return typeof helpHandler === 'string'
-					? console.log(helpHandler)
-					: helpHandler(commands);
+			if (command === undefined && pos === undefined) {
+				return await helpHandler(commands);
 			}
 
-			const cmd = commands.find((e) => e.name === command);
+			const cmd = commands.find((e) => e.name === pos || e.aliases?.find((a) => a === pos))
+				?? commands.find((e) => e.name === command || e.aliases?.find((a) => a === command));
 			if (cmd) {
-				return executeOrLog(cmd.help);
+				return cmd.help ? await executeOrLog(cmd.help) : await helpHandler(cmd);
 			}
 
-			return typeof helpHandler === 'string'
-				? console.log(helpHandler)
-				: helpHandler(commands);
+			return await helpHandler(commands);
 		},
 	});
 
@@ -522,17 +522,17 @@ const validateCommands = (commands: Command[]) => {
  */
 export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	let options: Record<string, OutputType> | undefined;
-	let cmd: RawCommand<any>;
+	let cmd: Command;
 
-	const rawCmds = validateCommands(commands);
+	const processedCmds = validateCommands(commands);
 
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
-	const helpHandler: string | Function = config?.help ?? help(rawCmds);
-	const cmds = [...rawCmds, helpCommand(rawCmds, helpHandler)];
+	const helpHandler = config?.help ?? defaultTheme;
+	const cmds = [...processedCmds, helpCommand(processedCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
-	if (!args.length) return await executeOrLog(helpHandler);
+	if (!args.length) return await helpHandler(processedCmds);
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 	if (helpIndex !== -1 && (helpIndex > 0 ? args[helpIndex - 1]?.startsWith('-') ? false : true : true)) {
@@ -551,12 +551,14 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 			command = command ?? getCommand(cmds, args).command;
 		}
 
-		return command ? await executeOrLog(command.help) : await executeOrLog(helpHandler);
+		return command
+			? command.help ? await executeOrLog(command.help) : await helpHandler(command)
+			: await helpHandler(processedCmds);
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
 	if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
-		return executeOrLog(version);
+		return await executeOrLog(version);
 	}
 
 	const { command, index } = getCommand(cmds, args);

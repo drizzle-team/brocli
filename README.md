@@ -38,7 +38,7 @@ Initial builder functions:
     If not specified, defaults to key of this option    
     :warning: - must not contain `=` character, not be in `--help`,`-h`,`--version`,`-v` and be unique per each command  
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
-    If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `string('-longname')`  
+    If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `number('-longname')`  
 
 -   `boolean(name?: string)` - defines option as a boolean-type option which requires data to be passed as `--option`  
     -   `name` - name by which option is passed in cli args  
@@ -47,8 +47,10 @@ Initial builder functions:
     :speech_balloon: - will be automatically prefixed with `-` if one character long, `--` if longer  
     If you wish to have only single hyphen as a prefix on multi character name - simply specify name with it: `boolean('-longname')`  
 
--   `positional()` - defines option as a positional-type option which requires data to be passed after a command as `command value`    
-    :warning: - does not consume options and data that starts with `-`
+-   `positional(displayName?: string)` - defines option as a positional-type option which requires data to be passed after a command as `command value`    
+    -   `displayName` - name by which option is passed in cli args  
+    If not specified, defaults to key of this option  
+    :warning: - does not consume options and data that starts with  
     
 Extensions: 
 

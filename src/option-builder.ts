@@ -121,6 +121,14 @@ export class OptionBuilderBase<
 		return this as any;
 	}
 
+	public positional<TName extends string>(displayName: TName): Omit<
+		OptionBuilderBase<
+			BuilderConfig,
+			string | undefined,
+			TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
+		>,
+		TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
+	>;
 	public positional(): Omit<
 		OptionBuilderBase<
 			BuilderConfig,
@@ -128,7 +136,9 @@ export class OptionBuilderBase<
 			TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
 		>,
 		TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
-	> {
+	>;
+	public positional(displayName?: string) {
+		this.config().name = displayName;
 		this.config().type = 'positional';
 
 		return this as any;
@@ -392,6 +402,14 @@ export function boolean<TName extends string>(name?: TName) {
 	return typeof name === 'string' ? new OptionBuilderBase().boolean(name) : new OptionBuilderBase().boolean();
 }
 
+export function positional<TName extends string>(displayName: TName): Omit<
+	OptionBuilderBase<
+		BuilderConfig,
+		string | undefined,
+		OptionType | 'min' | 'max' | 'int' | 'alias'
+	>,
+	OptionType | 'min' | 'max' | 'int' | 'alias'
+>;
 export function positional(): Omit<
 	OptionBuilderBase<
 		BuilderConfig,
@@ -399,6 +417,16 @@ export function positional(): Omit<
 		OptionType | 'min' | 'max' | 'int' | 'alias'
 	>,
 	OptionType | 'min' | 'max' | 'int' | 'alias'
+>;
+export function positional(displayName?: string): Omit<
+	OptionBuilderBase<
+		BuilderConfig,
+		string | undefined,
+		OptionType | 'min' | 'max' | 'int' | 'alias'
+	>,
+	OptionType | 'min' | 'max' | 'int' | 'alias'
 > {
-	return new OptionBuilderBase().positional();
+	return typeof displayName === 'number'
+		? new OptionBuilderBase().positional(displayName)
+		: new OptionBuilderBase().positional();
 }
