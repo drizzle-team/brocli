@@ -28,6 +28,7 @@ export type BroCliConfig = {
 	argSource?: string[];
 	help?: HelpHandler;
 	version?: string | Function;
+	omitKeysOfUndefinedOptions?: boolean;
 };
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
@@ -406,7 +407,11 @@ const parseArg = (
 	};
 };
 
-const parseOptions = (command: Command, args: string[]): Record<string, OutputType> | undefined => {
+const parseOptions = (
+	command: Command,
+	args: string[],
+	omitKeysOfUndefinedOptions?: boolean,
+): Record<string, OutputType> | undefined => {
 	const options = command.options;
 
 	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>);
@@ -436,7 +441,13 @@ const parseOptions = (command: Command, args: string[]): Record<string, OutputTy
 	}
 
 	for (const [optKey, { config: option }] of optEntries) {
-		result[optKey] = result[optKey] ?? option.default;
+		const data = result[optKey] ?? option.default;
+
+		if (!omitKeysOfUndefinedOptions) {
+			result[optKey] = data;
+		} else {
+			if (data !== undefined) result[optKey] = data;
+		}
 
 		if (option.isRequired && result[optKey] === undefined) missingRequiredArr.push([option.name!, ...option.aliases]);
 	}
@@ -529,6 +540,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
 	const helpHandler = config?.help ?? defaultTheme;
+	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
 	const cmds = [...processedCmds, helpCommand(processedCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
@@ -565,7 +577,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	if (!command) throw unknownCommand();
 
 	args = [...args.slice(0, index), ...args.slice(index + 1, args.length)];
-	options = parseOptions(command, args);
+	options = parseOptions(command, args, omitKeysOfUndefinedOptions);
 	cmd = command;
 
 	await cmd.handler(options);

@@ -1,46 +1,46 @@
 import type { Command, HelpHandler } from './command-core';
 import type { GenericProcessedOptions } from './option-builder';
 
-// export const defaultTheme: HelpHandler = (calledFor) => {
-// 	if (Array.isArray(calledFor)) {
-// 		const cmds = calledFor.filter((cmd) => !cmd.hidden);
+export const defaultTheme: HelpHandler = (calledFor) => {
+	if (Array.isArray(calledFor)) {
+		const cmds = calledFor.filter((cmd) => !cmd.hidden);
 
-// 		const tableCmds = cmds.map((cmd) => ({
-// 			name: cmd.name,
-// 			aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
-// 			description: cmd.description ?? '-',
-// 		}));
+		const tableCmds = cmds.map((cmd) => ({
+			name: cmd.name,
+			aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
+			description: cmd.description ?? '-',
+		}));
 
-// 		console.log(`Here's the list of all available commands:`);
-// 		console.table(tableCmds);
-// 		console.log(
-// 			'To read the details about any particular command type: help [commandName] | help --command=<commandName> | help -c <comandName>',
-// 		);
-// 	} else {
-// 		const options = calledFor.options
-// 			? Object.values(calledFor.options).filter((opt) => !opt.config?.isHidden).map(
-// 				({ config: opt }) => ({
-// 					name: opt.name,
-// 					aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
-// 					description: opt.description ?? '-',
-// 					type: opt.type,
-// 					required: opt.isRequired ? '✓' : '✗',
-// 				}),
-// 			)
-// 			: undefined;
+		console.log(`Here's the list of all available commands:`);
+		console.table(tableCmds);
+		console.log(
+			'To read the details about any particular command type: help [commandName] | help --command=<commandName> | help -c <comandName>',
+		);
+	} else {
+		const options = calledFor.options
+			? Object.values(calledFor.options).filter((opt) => !opt.config?.isHidden).map(
+				({ config: opt }) => ({
+					name: opt.name,
+					aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
+					description: opt.description ?? '-',
+					type: opt.type,
+					required: opt.isRequired ? '✓' : '✗',
+				}),
+			)
+			: undefined;
 
-// 		console.log(
-// 			`Command: ${calledFor.name}${calledFor.aliases ? ` [${calledFor.aliases.join(', ')}]` : ''}${
-// 				calledFor.description ? ` - ${calledFor.description}` : ''
-// 			}`,
-// 		);
+		console.log(
+			`Command: ${calledFor.name}${calledFor.aliases ? ` [${calledFor.aliases.join(', ')}]` : ''}${
+				calledFor.description ? ` - ${calledFor.description}` : ''
+			}`,
+		);
 
-// 		if (!options?.length) return;
+		if (!options?.length) return;
 
-// 		console.log('\nOptions:');
-// 		console.table(options);
-// 	}
-// };
+		console.log('\nOptions:');
+		console.table(options);
+	}
+};
 
 // Root help
 const rootHelp = (commands: Command[]) => {
@@ -195,7 +195,7 @@ const commandHelp = (command: Command) => {
 };
 
 // Theme core
-export const defaultTheme: HelpHandler = (calledFor) => {
+export const defaultThemeWIP: HelpHandler = (calledFor) => {
 	if (Array.isArray(calledFor)) {
 		rootHelp(calledFor);
 	} else {
