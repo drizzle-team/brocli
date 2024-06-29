@@ -36,9 +36,9 @@ export class OptionBuilderBase<
 
 	private config = (): TBuilderConfig => this._.config;
 
-	constructor() {
+	constructor(config?: TBuilderConfig) {
 		this._ = {
-			config: {
+			config: config ?? {
 				aliases: [],
 				type: 'string',
 			} as unknown as TBuilderConfig,
@@ -65,10 +65,9 @@ export class OptionBuilderBase<
 	public string(
 		name?: string,
 	) {
-		this.config().type = 'string';
-		this.config().name = name;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, type: 'string', name: name }) as any;
 	}
 
 	public number<TName extends string>(name: TName): Omit<
@@ -90,10 +89,9 @@ export class OptionBuilderBase<
 	public number(
 		name?: string,
 	) {
-		this.config().type = 'number';
-		this.config().name = name;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, type: 'number', name: name }) as any;
 	}
 
 	public boolean<TName extends string>(name: TName): Omit<
@@ -115,10 +113,9 @@ export class OptionBuilderBase<
 	public boolean(
 		name?: string,
 	) {
-		this.config().type = 'boolean';
-		this.config().name = name;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, type: 'boolean', name: name }) as any;
 	}
 
 	public positional<TName extends string>(displayName: TName): Omit<
@@ -138,10 +135,9 @@ export class OptionBuilderBase<
 		TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
 	>;
 	public positional(displayName?: string) {
-		this.config().name = displayName;
-		this.config().type = 'positional';
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, type: 'positional', name: displayName }) as any;
 	}
 
 	public alias(
@@ -154,9 +150,9 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'alias'
 	> {
-		this.config().aliases = aliases;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, aliases }) as any;
 	}
 
 	public desc<TDescription extends string>(description: TDescription): Omit<
@@ -167,9 +163,9 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'desc'
 	> {
-		this.config().description = description;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, description }) as any;
 	}
 
 	public hidden(): Omit<
@@ -180,9 +176,9 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'hidden'
 	> {
-		this.config().isHidden = true;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, isHidden: true }) as any;
 	}
 
 	public required(): Omit<
@@ -193,9 +189,9 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'required' | 'default'
 	> {
-		this.config().isRequired = true;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, isRequired: true }) as any;
 	}
 
 	public default<TDefVal extends TEnums extends undefined ? Exclude<TOutput, undefined> : TEnums>(value: TDefVal): Omit<
@@ -207,16 +203,16 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'enum' | 'required' | 'default'
 	> {
-		const enums = this.config().enumVals;
+		const config = this.config();
+
+		const enums = config.enumVals;
 		if (enums && !enums.find((v) => value === v)) {
 			throw new Error(
 				`Option enums [ ${enums.join(', ')} ] are incompatible with default value ${value}`,
 			);
 		}
 
-		this.config().default = value;
-
-		return this as any;
+		return new OptionBuilderBase({ ...config, default: value }) as any;
 	}
 
 	public enum<TValues extends [string, ...string[]]>(...values: TValues): Omit<
@@ -228,15 +224,16 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'enum'
 	> {
-		const defaultVal = this.config().default;
+		const config = this.config();
+
+		const defaultVal = config.default;
 		if (defaultVal !== undefined && !values.find((v) => defaultVal === v)) {
 			throw new Error(
 				`Option enums [ ${values.join(', ')} ] are incompatible with default value ${defaultVal}`,
 			);
 		}
-		this.config().enumVals = values;
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, enumVals: values }) as any;
 	}
 
 	public min(value: number): Omit<
@@ -247,14 +244,14 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'min'
 	> {
-		const maxVal = this.config().maxVal;
+		const config = this.config();
+
+		const maxVal = config.maxVal;
 		if (maxVal !== undefined && maxVal < value) {
 			throw new BrocliError("Unable to define option's min value to be higher than max value!");
 		}
 
-		this.config().minVal = value;
-
-		return this as any;
+		return new OptionBuilderBase({ ...config, minVal: value }) as any;
 	}
 
 	public max(value: number): Omit<
@@ -265,14 +262,14 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'max'
 	> {
-		const minVal = this.config().minVal;
+		const config = this.config();
+
+		const minVal = config.minVal;
 		if (minVal !== undefined && minVal < value) {
 			throw new BrocliError("Unable to define option's max value to be lower than min value!");
 		}
 
-		this.config().maxVal = value;
-
-		return this as any;
+		return new OptionBuilderBase({ ...config, maxVal: value }) as any;
 	}
 
 	public int(): Omit<
@@ -283,9 +280,9 @@ export class OptionBuilderBase<
 		>,
 		TOmit | 'int'
 	> {
-		this.config().isInt = true;
+		const config = this.config();
 
-		return this as any;
+		return new OptionBuilderBase({ ...config, isInt: true }) as any;
 	}
 }
 
