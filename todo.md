@@ -6,7 +6,11 @@
  - Explicit type erros (strings for types)
  - exclusive\inclusive comparison for min\max
  - enums that consume type from generics
- 
+ - .refine()
+ - .transform()
+ - .length()
+ - Make TypeOf work on single element 
+
  # Urgent
  - Complete help 
  - Self-cloning builders
