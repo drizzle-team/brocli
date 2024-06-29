@@ -1,4 +1,4 @@
-import { BrocliError } from '.';
+import { BroCliError } from './brocli-error';
 
 export type OptionType = 'string' | 'boolean' | 'number' | 'positional';
 
@@ -248,7 +248,7 @@ export class OptionBuilderBase<
 
 		const maxVal = config.maxVal;
 		if (maxVal !== undefined && maxVal < value) {
-			throw new BrocliError("Unable to define option's min value to be higher than max value!");
+			throw new BroCliError("Unable to define option's min value to be higher than max value!");
 		}
 
 		return new OptionBuilderBase({ ...config, minVal: value }) as any;
@@ -266,7 +266,7 @@ export class OptionBuilderBase<
 
 		const minVal = config.minVal;
 		if (minVal !== undefined && minVal < value) {
-			throw new BrocliError("Unable to define option's max value to be lower than min value!");
+			throw new BroCliError("Unable to define option's max value to be lower than min value!");
 		}
 
 		return new OptionBuilderBase({ ...config, maxVal: value }) as any;
