@@ -2,21 +2,17 @@
 
  - Test for function calls instead of storage - https://vitest.dev/api/mock.html
  - Update tests
- - Add automatically typing handler creator function
  - New discovery: fix --version \ --help behaviour when passed as arg
  - Explicit type erros (strings for types)
-
+ - exclusive\inclusive comparison for min\max
+ - enums that consume type from generics
+ 
  # Urgent
- - replace commandHelp with on command helps +
- - version & help to be string | callback | async callback +
- - remove name +
- - default version to undefined with no errors +
+ - Complete help 
+ - Self-cloning builders
 
  # next version
  - subcommands (ref.: Turso CLI)
- - positional args (disregard - and -- beginnings in args when parsing positionals)
- - enums
- - numbers with range and int\real vers
 
  # Scenarios
 
