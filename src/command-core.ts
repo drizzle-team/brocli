@@ -314,6 +314,12 @@ export const command = <
 	});
 
 	allNames.forEach((n, i) => {
+		if (n === 'help') {
+			throw new BroCliError(
+				`Can't define command '${cmd.name}' - 'help' is a reserved name. If you want to redefine help message - do so in runCli's config.`,
+			);
+		}
+
 		const idx = allNames.findIndex((an) => an === n);
 
 		if (idx !== i) throw new BroCliError(`Can't define command '${cmd.name}' - duplicate alias '${n}'!`);
