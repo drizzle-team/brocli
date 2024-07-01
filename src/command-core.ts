@@ -596,6 +596,8 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 	return cloned;
 };
 
+const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
+
 /**
  * Separated for testing purposes
  */
@@ -644,7 +646,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	const { command, index } = getCommand(cmds, args);
 	if (!command) throw unknownCommand();
 
-	args = [...args.slice(0, index), ...args.slice(index + 1, args.length)];
+	args = removeByIndex(args, index);
 	options = parseOptions(command, args, omitKeysOfUndefinedOptions);
 	cmd = command;
 
