@@ -545,7 +545,7 @@ const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
 		},
 	});
 
-const getCommandNameRecursive = (command: Command): string =>
+export const getCommandNameRecursive = (command: Command): string =>
 	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
 
 const validateCommands = (commands: Command[], parent?: Command) => {
