@@ -4,10 +4,10 @@ export type OptionType = 'string' | 'boolean' | 'number' | 'positional';
 
 export type OutputType = string | boolean | number | undefined;
 
-export type BuilderConfig = {
+export type BuilderConfig<TType extends OptionType = OptionType> = {
 	name?: string | undefined;
 	aliases: string[];
-	type: OptionType;
+	type: TType;
 	description?: string;
 	default?: OutputType;
 	isHidden?: boolean;
@@ -66,7 +66,7 @@ export class OptionBuilderBase<
 
 	public string<TName extends string>(name: TName): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'string'>,
 			string | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'int'
 		>,
@@ -74,7 +74,7 @@ export class OptionBuilderBase<
 	>;
 	public string(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'string'>,
 			string | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'int'
 		>,
@@ -90,7 +90,7 @@ export class OptionBuilderBase<
 
 	public number<TName extends string>(name: TName): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'number'>,
 			number | undefined,
 			TOmit | OptionType | 'enum'
 		>,
@@ -98,7 +98,7 @@ export class OptionBuilderBase<
 	>;
 	public number(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'number'>,
 			string | undefined,
 			TOmit | OptionType | 'enum'
 		>,
@@ -114,7 +114,7 @@ export class OptionBuilderBase<
 
 	public boolean<TName extends string>(name: TName): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'boolean'>,
 			boolean | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'enum' | 'int'
 		>,
@@ -122,7 +122,7 @@ export class OptionBuilderBase<
 	>;
 	public boolean(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'boolean'>,
 			boolean | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'enum' | 'int'
 		>,
@@ -138,7 +138,7 @@ export class OptionBuilderBase<
 
 	public positional<TName extends string>(displayName: TName): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'positional'>,
 			string | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
 		>,
@@ -146,7 +146,7 @@ export class OptionBuilderBase<
 	>;
 	public positional(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			BuilderConfig<'positional'>,
 			string | undefined,
 			TOmit | OptionType | 'min' | 'max' | 'int' | 'alias'
 		>,
@@ -162,7 +162,7 @@ export class OptionBuilderBase<
 		...aliases: string[]
 	): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'alias'
 		>,
@@ -175,7 +175,7 @@ export class OptionBuilderBase<
 
 	public desc<TDescription extends string>(description: TDescription): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'desc'
 		>,
@@ -188,7 +188,7 @@ export class OptionBuilderBase<
 
 	public hidden(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'hidden'
 		>,
@@ -201,7 +201,7 @@ export class OptionBuilderBase<
 
 	public required(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			Exclude<TOutput, undefined>,
 			TOmit | 'required' | 'default'
 		>,
@@ -214,7 +214,7 @@ export class OptionBuilderBase<
 
 	public default<TDefVal extends TEnums extends undefined ? Exclude<TOutput, undefined> : TEnums>(value: TDefVal): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			Exclude<TOutput, undefined>,
 			TOmit | 'enum' | 'required' | 'default',
 			TEnums
@@ -235,7 +235,7 @@ export class OptionBuilderBase<
 
 	public enum<TValues extends [string, ...string[]]>(...values: TValues): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TValues[number],
 			TOmit | 'enum',
 			TValues[number]
@@ -256,7 +256,7 @@ export class OptionBuilderBase<
 
 	public min(value: number): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'min'
 		>,
@@ -274,7 +274,7 @@ export class OptionBuilderBase<
 
 	public max(value: number): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'max'
 		>,
@@ -292,7 +292,7 @@ export class OptionBuilderBase<
 
 	public int(): Omit<
 		OptionBuilderBase<
-			BuilderConfig,
+			TBuilderConfig,
 			TOutput,
 			TOmit | 'int'
 		>,
@@ -363,7 +363,7 @@ export function string<TName extends string>(
 	name: TName,
 ): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'string'>,
 		string | undefined,
 		OptionType | 'min' | 'max' | 'int'
 	>,
@@ -371,7 +371,7 @@ export function string<TName extends string>(
 >;
 export function string(): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'string'>,
 		string | undefined,
 		OptionType | 'min' | 'max' | 'int'
 	>,
@@ -385,7 +385,7 @@ export function number<TName extends string>(
 	name: TName,
 ): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'number'>,
 		number | undefined,
 		OptionType | 'enum'
 	>,
@@ -393,7 +393,7 @@ export function number<TName extends string>(
 >;
 export function number(): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'number'>,
 		number | undefined,
 		OptionType | 'enum'
 	>,
@@ -407,7 +407,7 @@ export function boolean<TName extends string>(
 	name: TName,
 ): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'boolean'>,
 		boolean | undefined,
 		OptionType | 'min' | 'max' | 'int' | 'enum'
 	>,
@@ -415,7 +415,7 @@ export function boolean<TName extends string>(
 >;
 export function boolean(): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'boolean'>,
 		boolean | undefined,
 		OptionType | 'min' | 'max' | 'int' | 'enum'
 	>,
@@ -427,7 +427,7 @@ export function boolean<TName extends string>(name?: TName) {
 
 export function positional<TName extends string>(displayName: TName): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'positional'>,
 		string | undefined,
 		OptionType | 'min' | 'max' | 'int' | 'alias'
 	>,
@@ -435,20 +435,13 @@ export function positional<TName extends string>(displayName: TName): Omit<
 >;
 export function positional(): Omit<
 	OptionBuilderBase<
-		BuilderConfig,
+		BuilderConfig<'positional'>,
 		string | undefined,
 		OptionType | 'min' | 'max' | 'int' | 'alias'
 	>,
 	OptionType | 'min' | 'max' | 'int' | 'alias'
 >;
-export function positional(displayName?: string): Omit<
-	OptionBuilderBase<
-		BuilderConfig,
-		string | undefined,
-		OptionType | 'min' | 'max' | 'int' | 'alias'
-	>,
-	OptionType | 'min' | 'max' | 'int' | 'alias'
-> {
+export function positional(displayName?: string) {
 	return typeof displayName === 'number'
 		? new OptionBuilderBase().positional(displayName)
 		: new OptionBuilderBase().positional();

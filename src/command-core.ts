@@ -4,6 +4,7 @@ import { defaultTheme } from './help-themes';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
+	GenericBuilderInternalsLimited,
 	type OutputType,
 	positional,
 	type ProcessedBuilderConfig,
@@ -37,15 +38,20 @@ export type RawCommand<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
 		| undefined,
-> = {
-	name?: string;
-	aliases?: [string, ...string[]];
-	description?: string;
-	hidden?: boolean;
-	options?: TOpts;
-	help?: string | Function;
-	handler?: CommandHandler<TOpts>;
-};
+> =
+	& {
+		name?: string;
+		aliases?: [string, ...string[]];
+		description?: string;
+		hidden?: boolean;
+		options?: TOpts;
+		help?: string | Function;
+		handler?: CommandHandler<TOpts>;
+	}
+	& (TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined ? {
+			subcommands?: [Command, ...Command[]];
+		}
+		: {});
 
 export type Command = {
 	name: string;
@@ -55,6 +61,7 @@ export type Command = {
 	options?: ProcessedOptions;
 	help?: string | Function;
 	handler: GenericCommandHandler;
+	subcommands?: [Command, ...Command[]];
 };
 
 // Message area
