@@ -9,14 +9,16 @@ export type {
 } from './command-core';
 export { command, handler, runCli } from './command-core';
 export type {
-	AssignConfigName,
 	BuilderConfig,
+	BuilderConfigLimited,
 	GenericBuilderInternals,
 	GenericBuilderInternalsFields,
-	GenericProcessedOptions,
+	GenericBuilderInternalsFieldsLimited,
+	GenericBuilderInternalsLimited,
 	OptionBuilderBase,
 	OptionType,
 	OutputType,
+	ProcessedBuilderConfig,
 	ProcessedOptions,
 	Simplify,
 	TypeOf,

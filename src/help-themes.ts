@@ -1,5 +1,5 @@
 import type { Command, HelpHandler } from './command-core';
-import type { GenericProcessedOptions } from './option-builder';
+import type { ProcessedOptions } from './option-builder';
 
 export const defaultTheme: HelpHandler = (calledFor) => {
 	if (Array.isArray(calledFor)) {
@@ -54,7 +54,7 @@ const prepareCommandString = (command: Command) => {
 
 	const positionals = optEntries.filter(
 		(opt) => !opt[1].config.isHidden && opt[1].config.type === 'positional',
-	).map((p) => p[1].config.isRequired ? `[${p[1].config.name!}]` : `<${p[1].config.name!}>`);
+	).map((p) => p[1].config.isRequired ? `[${p[1].config.name}]` : `<${p[1].config.name}>`);
 
 	const hasOpts = (optEntries.length - positionals.length) > 0;
 
@@ -110,7 +110,7 @@ const splitByMaxLen = (input: string, length: number) => {
 	return output;
 };
 
-const prepareOptionStrings = (options: GenericProcessedOptions) => {
+const prepareOptionStrings = (options: ProcessedOptions) => {
 	const opts = Object.entries(options)
 		.filter((opt) => !opt[1].config.isHidden && opt[1].config.type !== 'positional').map((opt) => opt[1].config);
 
@@ -132,7 +132,7 @@ const prepareOptionStrings = (options: GenericProcessedOptions) => {
 			? `${opt.minVal !== undefined ? `[ ${opt.minVal}` : '( ∞'} ; ${opt.maxVal !== undefined ? opt.maxVal : '∞ )'} ]`
 			: '';
 
-		const namePart = enumPart ? `${opt.name} ${enumPart}` : opt.name!;
+		const namePart = enumPart ? `${opt.name} ${enumPart}` : opt.name;
 
 		const description = `${opt.description ? `${opt.description}` : ''}${
 			opt.description !== undefined && opt.default !== undefined ? ' ' : ''

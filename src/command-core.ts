@@ -4,9 +4,9 @@ import { defaultTheme } from './help-themes';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
-	GenericProcessedOptions,
 	type OutputType,
 	positional,
+	type ProcessedBuilderConfig,
 	type ProcessedOptions,
 	string,
 	type TypeOf,
@@ -52,7 +52,7 @@ export type Command = {
 	aliases?: [string, ...string[]];
 	description?: string;
 	hidden?: boolean;
-	options?: GenericProcessedOptions;
+	options?: ProcessedOptions;
 	help?: string | Function;
 	handler: GenericCommandHandler;
 };
@@ -305,8 +305,8 @@ const getCommand = (commands: Command[], args: string[]) => {
 };
 
 const parseArg = (
-	options: [string, GenericBuilderInternalsFields][],
-	positionals: [string, GenericBuilderInternalsFields][],
+	options: [string, ProcessedBuilderConfig][],
+	positionals: [string, ProcessedBuilderConfig][],
 	arg: string,
 	nextArg: string | undefined,
 ) => {
@@ -324,8 +324,8 @@ const parseArg = (
 
 		const pos = positionals.shift()!;
 
-		if (pos[1].config.enumVals && !pos[1].config.enumVals.find((val) => val === dataPart)) {
-			throw enumViolationPos(pos[1].config.name!, arg, pos[1].config.enumVals);
+		if (pos[1].enumVals && !pos[1].enumVals.find((val) => val === dataPart)) {
+			throw enumViolationPos(pos[1].name!, arg, pos[1].enumVals);
 		}
 
 		data = arg;
@@ -338,7 +338,7 @@ const parseArg = (
 		};
 	}
 
-	const option = options.find(([optKey, { config: opt }]) => {
+	const option = options.find(([optKey, opt]) => {
 		const names = [opt.name!, ...opt.aliases];
 
 		if (opt.type === 'boolean') {
@@ -414,10 +414,12 @@ const parseOptions = (
 ): Record<string, OutputType> | undefined => {
 	const options = command.options;
 
-	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>);
+	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>).map(
+		(opt) => [opt[0], opt[1].config] as [string, ProcessedBuilderConfig],
+	);
 
-	const nonPositionalEntries = optEntries.filter(([key, opt]) => opt.config.type !== 'positional');
-	const positionalEntries = optEntries.filter(([key, opt]) => opt.config.type === 'positional');
+	const nonPositionalEntries = optEntries.filter(([key, opt]) => opt.type !== 'positional');
+	const positionalEntries = optEntries.filter(([key, opt]) => opt.type === 'positional');
 
 	const result: Record<string, OutputType> = {};
 
@@ -440,7 +442,7 @@ const parseOptions = (
 		result[name!] = data;
 	}
 
-	for (const [optKey, { config: option }] of optEntries) {
+	for (const [optKey, option] of optEntries) {
 		const data = result[optKey] ?? option.default;
 
 		if (!omitKeysOfUndefinedOptions) {

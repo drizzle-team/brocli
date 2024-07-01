@@ -18,6 +18,24 @@ export type BuilderConfig = {
 	enumVals?: [string, ...string[]];
 };
 
+export type ProcessedBuilderConfig = {
+	name: string;
+	aliases: string[];
+	type: OptionType;
+	description?: string;
+	default?: OutputType;
+	isHidden?: boolean;
+	isRequired?: boolean;
+	isInt?: boolean;
+	minVal?: number;
+	maxVal?: number;
+	enumVals?: [string, ...string[]];
+};
+
+export type BuilderConfigLimited = BuilderConfig & {
+	type: Exclude<OptionType, 'positional'>;
+};
+
 export class OptionBuilderBase<
 	TBuilderConfig extends BuilderConfig = BuilderConfig,
 	TOutput extends OutputType = string,
@@ -300,17 +318,25 @@ export type GenericBuilderInternals = {
 	_: GenericBuilderInternalsFields;
 };
 
-export type AssignConfigName<TConfig extends BuilderConfig, TName extends string> = TConfig['name'] extends undefined
-	? Omit<TConfig, 'name'> & { name: TName }
-	: TConfig;
+export type GenericBuilderInternalsFieldsLimited = {
+	/**
+	 * Type-level only field
+	 *
+	 * Do not attempt to access at a runtime
+	 */
+	$output: OutputType;
+	config: BuilderConfigLimited;
+};
 
-export type GenericProcessedOptions = ProcessedOptions<Record<string, GenericBuilderInternals>>;
+export type GenericBuilderInternalsLimited = {
+	_: GenericBuilderInternalsFieldsLimited;
+};
 
 export type ProcessedOptions<
 	TOptionConfig extends Record<string, GenericBuilderInternals> = Record<string, GenericBuilderInternals>,
 > = {
 	[K in keyof TOptionConfig]: K extends string ? {
-			config: AssignConfigName<TOptionConfig[K]['_']['config'], K>;
+			config: ProcessedBuilderConfig;
 			/**
 			 * Type-level only field
 			 *
