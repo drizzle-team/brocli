@@ -62,6 +62,7 @@ export type Command = {
 	help?: string | Function;
 	handler: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
+	parent?: Command;
 };
 
 // Message area
@@ -498,12 +499,18 @@ const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
 		},
 	});
 
-const validateCommands = (commands: Command[]) => {
-	const cloned = clone(commands);
+const getCommandNameRecursive = (command: Command): string =>
+	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
+
+const validateCommands = (commands: Command[], parent?: Command) => {
+	const cloned = parent ? commands : clone(commands);
+
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
 	for (const cmd of cloned) {
 		const storageVals = Object.values(storedNames);
+
+		cmd.parent = parent;
 
 		for (const storage of storageVals) {
 			const nameOccupier = storage.find((e) => e === cmd.name);
@@ -511,7 +518,9 @@ const validateCommands = (commands: Command[]) => {
 			if (!nameOccupier) continue;
 
 			throw new Error(
-				`Can't define command '${cmd.name}': name is already in use by command '${storage[0]}'!`,
+				`Can't define command '${getCommandNameRecursive(cmd)}': name is already in use by command '${
+					parent ? `${getCommandNameRecursive(parent)} ` : ''
+				}${storage[0]}'!`,
 			);
 		}
 
@@ -523,7 +532,9 @@ const validateCommands = (commands: Command[]) => {
 					if (!nameOccupier) continue;
 
 					throw new Error(
-						`Can't define command '${cmd.name}': alias '${alias}' is already in use by command '${storage[0]}'!`,
+						`Can't define command '${getCommandNameRecursive(cmd)}': alias '${alias}' is already in use by command '${
+							parent ? `${getCommandNameRecursive(parent)} ` : ''
+						}${storage[0]}'!`,
 					);
 				}
 			}
@@ -532,6 +543,8 @@ const validateCommands = (commands: Command[]) => {
 		storedNames[cmd.name] = cmd.aliases
 			? [cmd.name, ...cmd.aliases]
 			: [cmd.name];
+
+		if (cmd.subcommands) cmd.subcommands = validateCommands(cmd.subcommands, cmd) as [Command, ...Command[]];
 	}
 
 	return cloned;
