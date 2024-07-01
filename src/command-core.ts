@@ -38,20 +38,52 @@ export type RawCommand<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
 		| undefined,
-> =
-	& {
-		name?: string;
-		aliases?: [string, ...string[]];
-		description?: string;
-		hidden?: boolean;
-		options?: TOpts;
-		help?: string | Function;
-		handler?: CommandHandler<TOpts>;
-	}
-	& (TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined ? {
-			subcommands?: [Command, ...Command[]];
-		}
-		: {});
+> = TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined ? RawCommandWithSubcommands<TOpts>
+	: RawCommandWithPositionals<TOpts>;
+
+export type RawCommandWithPositionals<
+	TOpts extends Record<string, GenericBuilderInternals> | undefined =
+		| Record<string, GenericBuilderInternals>
+		| undefined,
+> = {
+	name?: string;
+	aliases?: [string, ...string[]];
+	description?: string;
+	hidden?: boolean;
+	options?: TOpts;
+	help?: string | Function;
+	handler?: CommandHandler<TOpts>;
+};
+
+export type RawCommandWithSubcommands<
+	TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined =
+		| Record<string, GenericBuilderInternalsLimited>
+		| undefined,
+> = {
+	name?: string;
+	aliases?: [string, ...string[]];
+	description?: string;
+	hidden?: boolean;
+	options?: TOpts;
+	help?: string | Function;
+	handler?: CommandHandler<TOpts>;
+	subcommands?: [Command, ...Command[]];
+};
+
+export type AnyRawCommand<
+	TOpts extends Record<string, GenericBuilderInternals> | undefined =
+		| Record<string, GenericBuilderInternals>
+		| undefined,
+> = {
+	name?: string;
+	aliases?: [string, ...string[]];
+	description?: string;
+	hidden?: boolean;
+	options?: TOpts;
+	help?: string | Function;
+	handler?: CommandHandler<TOpts>;
+	subcommands?: [Command, ...Command[]];
+};
 
 export type Command = {
 	name: string;
@@ -253,6 +285,14 @@ export const command = <
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
 	const cmd: Command = command as any;
 
+	if (
+		(<AnyRawCommand> command).subcommands && command.options
+		&& Object.values(command.options).find((opt) => opt._.config.type === 'positional')
+	) {
+		throw new BroCliError(
+			`Can't define command '${cmd.name}' - command can't have subcommands and positional args at the same time!`,
+		);
+	}
 	cmd.options = processedOptions;
 
 	cmd.name = cmd.name ?? cmd.aliases?.shift();

@@ -1,11 +1,14 @@
 export { BroCliError } from './brocli-error';
 export type {
+	AnyRawCommand,
 	BroCliConfig,
 	Command,
 	CommandHandler,
 	GenericCommandHandler,
 	HelpHandler,
 	RawCommand,
+	RawCommandWithPositionals,
+	RawCommandWithSubcommands,
 } from './command-core';
 export { command, handler, runCli } from './command-core';
 export type {
