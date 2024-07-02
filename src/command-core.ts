@@ -108,14 +108,19 @@ export type InnerCommandParseRes = {
 };
 
 // Message area
-const unknownCommand = () => {
-	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
+const unknownCommand = (caller: string) => {
+	const msg = `Unknown command: '${caller}'.\nType '--help' to get help on the cli.`;
 
 	return new Error(msg);
 };
 
-const unknownSubcommand = (command: Command) => {
-	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
+const unknownSubcommand = (command: Command, caller: string) => {
+	const name = getCommandNameRecursive(command);
+
+	const msg = `Unknown command: ${name} ${caller}.\nType '${name} --help' to get the help on command.`;
+	new Error(
+		msg,
+	);
 
 	return new Error(msg);
 };
@@ -378,13 +383,7 @@ const getCommandInner = (commands: Command[], candidates: CommandCandidate[], ar
 
 	const subcommand = getCommandInner(command.subcommands!, newCandidates, newArgs);
 
-	if (!subcommand.command) {
-		const name = getCommandNameRecursive(command);
-
-		throw new Error(
-			`Unknown command: ${name} ${candidates[0]!.data}.\nType '${name} --help' to get the help on command.`,
-		);
-	}
+	if (!subcommand.command) throw unknownSubcommand(command, candidates[0]!.data);
 
 	return subcommand;
 };
@@ -413,10 +412,11 @@ const getCommand = (commands: Command[], args: string[]) => {
 		};
 	}
 
+	const firstCandidate = candidates[0]!;
+
 	const { command, args: argsRes } = getCommandInner(commands, candidates, args);
 
-	// if (!command) throw new Error(`Unknown command: '${candidates[0]!.data}'!`);
-	if (!command) throw unknownCommand();
+	if (!command) throw unknownCommand(firstCandidate.data);
 
 	return {
 		command,
@@ -710,7 +710,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	}
 
 	const { command, args: newArgs } = getCommand(cmds, args);
-	if (!command) throw unknownCommand();
+	if (!command) return helpHandler(processedCmds);
 
 	options = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
 	cmd = command;

@@ -290,7 +290,7 @@ describe('Command parsing tests', (it) => {
 		await expect(async () => await runCli(commands, { argSource: getArgs('unknown', '--somearg=somevalue', '-f') }))
 			.rejects
 			.toThrowError(
-				new Error(`Unable to recognize any of the commands.\nUse 'help' command to list all commands.`),
+				new Error(`Unknown command: 'unknown'.\nType '--help' to get help on the cli.`),
 			);
 	});
 });
