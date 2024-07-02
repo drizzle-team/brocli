@@ -97,8 +97,24 @@ export type Command = {
 	parent?: Command;
 };
 
+export type CommandCandidate = {
+	data: string;
+	originalIndex: number;
+};
+
+export type InnerCommandParseRes = {
+	command: Command | undefined;
+	args: string[];
+};
+
 // Message area
 const unknownCommand = () => {
+	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
+
+	return new Error(msg);
+};
+
+const unknownSubcommand = (command: Command) => {
 	const msg = `Unable to recognize any of the commands.\nUse 'help' command to list all commands.`;
 
 	return new Error(msg);
@@ -279,7 +295,11 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
->(command: RawCommand<TOpts>) => {
+>(command: RawCommand<TOpts>) => commandCheckBypass(command);
+
+const commandCheckBypass = <
+	TOpts extends Record<string, GenericBuilderInternals> | undefined,
+>(command: RawCommand<TOpts>, ignoreReserved = true) => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
@@ -314,7 +334,7 @@ export const command = <
 	});
 
 	allNames.forEach((n, i) => {
-		if (n === 'help') {
+		if (!ignoreReserved && n === 'help') {
 			throw new BroCliError(
 				`Can't define command '${cmd.name}' - 'help' is a reserved name. If you want to redefine help message - do so in runCli's config.`,
 			);
@@ -328,33 +348,79 @@ export const command = <
 	return cmd;
 };
 
+const getCommandInner = (commands: Command[], candidates: CommandCandidate[], args: string[]): InnerCommandParseRes => {
+	const { data: arg, originalIndex: index } = candidates.shift()!;
+
+	const command = commands.find((c) => {
+		const names = c.aliases ? [c.name, ...c.aliases] : [c.name];
+		const res = names.find((name) => name === arg);
+
+		return res;
+	});
+
+	if (!command) {
+		return {
+			command,
+			args,
+		};
+	}
+
+	const newArgs = removeByIndex(args, index);
+
+	if (!candidates.length || !command.subcommands) {
+		return {
+			command,
+			args: newArgs,
+		};
+	}
+
+	const newCandidates = candidates.map((c) => ({ data: c.data, originalIndex: c.originalIndex - 1 }));
+
+	const subcommand = getCommandInner(command.subcommands!, newCandidates, newArgs);
+
+	if (!subcommand.command) {
+		const name = getCommandNameRecursive(command);
+
+		throw new Error(
+			`Unknown command: ${name} ${candidates[0]!.data}.\nType '${name} --help' to get the help on command.`,
+		);
+	}
+
+	return subcommand;
+};
+
 const getCommand = (commands: Command[], args: string[]) => {
-	let index: number = -1;
-	let command: Command | undefined;
+	const candidates: CommandCandidate[] = [];
 
 	for (let i = 0; i < args.length; ++i) {
-		const arg = args[i];
+		const arg = args[i]!;
 		if (arg?.startsWith('-')) {
 			if (!arg.includes('=')) ++i;
 
 			continue;
 		}
 
-		command = commands.find((c) => {
-			const names = c.aliases ? [c.name, ...c.aliases] : [c.name];
-			const res = names.find((name) => name === arg);
-
-			if (res) index = i;
-
-			return res;
+		candidates.push({
+			data: arg,
+			originalIndex: i,
 		});
-
-		if (command) break;
 	}
+
+	if (!candidates.length) {
+		return {
+			command: undefined,
+			args,
+		};
+	}
+
+	const { command, args: argsRes } = getCommandInner(commands, candidates, args);
+
+	// if (!command) throw new Error(`Unknown command: '${candidates[0]!.data}'!`);
+	if (!command) throw unknownCommand();
 
 	return {
 		command,
-		index,
+		args: argsRes,
 	};
 };
 
@@ -520,7 +586,7 @@ const executeOrLog = async (target: string | Function | undefined) => {
 };
 
 const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
-	command({
+	commandCheckBypass({
 		name: 'help',
 		description: 'List commands or command details',
 		options: {
@@ -543,7 +609,7 @@ const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
 
 			return await helpHandler(commands);
 		},
-	});
+	}, true);
 
 export const getCommandNameRecursive = (command: Command): string =>
 	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
@@ -643,11 +709,10 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 		return await executeOrLog(version);
 	}
 
-	const { command, index } = getCommand(cmds, args);
+	const { command, args: newArgs } = getCommand(cmds, args);
 	if (!command) throw unknownCommand();
 
-	args = removeByIndex(args, index);
-	options = parseOptions(command, args, omitKeysOfUndefinedOptions);
+	options = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
 	cmd = command;
 
 	await cmd.handler(options);
