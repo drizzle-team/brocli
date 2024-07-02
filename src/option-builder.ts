@@ -400,7 +400,7 @@ export function number(): Omit<
 	OptionType | 'enum'
 >;
 export function number<TName extends string>(name?: TName) {
-	return typeof name === 'number' ? new OptionBuilderBase().number(name) : new OptionBuilderBase().number();
+	return typeof name === 'string' ? new OptionBuilderBase().number(name) : new OptionBuilderBase().number();
 }
 
 export function boolean<TName extends string>(
@@ -442,7 +442,7 @@ export function positional(): Omit<
 	OptionType | 'min' | 'max' | 'int' | 'alias'
 >;
 export function positional(displayName?: string) {
-	return typeof displayName === 'number'
+	return typeof displayName === 'string'
 		? new OptionBuilderBase().positional(displayName)
 		: new OptionBuilderBase().positional();
 }

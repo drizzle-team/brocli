@@ -247,7 +247,11 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 	for (const [key, value] of cfgEntries) {
 		const cfg = value._.config;
 
-		if (cfg.type === 'positional') continue;
+		if (cfg.type === 'positional') {
+			entries.push([key, { config: cfg, $output: undefined as any }]);
+
+			continue;
+		}
 
 		const reservedNames = ['--help', '-h', '--version', '-v'];
 
@@ -480,6 +484,12 @@ const parseArg = (
 
 			if (lcaseData === 'false' || lcaseData === '0') {
 				data = false;
+				return true;
+			}
+
+			if (!hasEq) {
+				data = true;
+				skipNext = false;
 				return true;
 			}
 
