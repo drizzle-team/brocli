@@ -38,13 +38,18 @@ export type RawCommand<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
 		| undefined,
-> = TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined ? RawCommandWithSubcommands<TOpts>
-	: RawCommandWithPositionals<TOpts>;
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
+> = TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined
+	? RawCommandWithSubcommands<TOpts, TOptsData, TTransformed>
+	: RawCommandWithPositionals<TOpts, TOptsData, TTransformed>;
 
 export type RawCommandWithPositionals<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
 		| undefined,
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
 > = {
 	name?: string;
 	aliases?: [string, ...string[]];
@@ -52,13 +57,16 @@ export type RawCommandWithPositionals<
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
-	handler?: CommandHandler<TOpts>;
+	transform?: (options: TOptsData) => TTransformed;
+	handler?: (options: Awaited<TTransformed>) => any;
 };
 
 export type RawCommandWithSubcommands<
 	TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined =
 		| Record<string, GenericBuilderInternalsLimited>
 		| undefined,
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
 > = {
 	name?: string;
 	aliases?: [string, ...string[]];
@@ -66,7 +74,26 @@ export type RawCommandWithSubcommands<
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
-	handler?: CommandHandler<TOpts>;
+	transform?: (options: TOptsData) => TTransformed;
+	handler?: (options: Awaited<TTransformed>) => any;
+	subcommands?: [Command, ...Command[]];
+};
+
+export type RawCommandUniversal<
+	TOpts extends Record<string, GenericBuilderInternals> | undefined =
+		| Record<string, GenericBuilderInternals>
+		| undefined,
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
+> = {
+	name?: string;
+	aliases?: [string, ...string[]];
+	description?: string;
+	hidden?: boolean;
+	options?: TOpts;
+	help?: string | Function;
+	transform?: (options: TOptsData) => TTransformed;
+	handler?: (options: Awaited<TTransformed>) => any;
 	subcommands?: [Command, ...Command[]];
 };
 
@@ -81,7 +108,8 @@ export type AnyRawCommand<
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
-	handler?: CommandHandler<TOpts>;
+	transform?: GenericCommandHandler;
+	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 };
 
@@ -92,6 +120,7 @@ export type Command = {
 	hidden?: boolean;
 	options?: ProcessedOptions;
 	help?: string | Function;
+	transform?: GenericCommandHandler;
 	handler: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 	parent?: Command;
@@ -125,7 +154,7 @@ const unknownSubcommand = (command: Command, caller: string) => {
 	return new Error(msg);
 };
 
-const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...string[][]]) => {
+const missingRequired = (command: RawCommand<any, any, any>, missingOpts: [string[], ...string[][]]) => {
 	const msg = `Command '${command.name}' is missing following required options: ${
 		missingOpts.map((opt) => {
 			const name = opt.shift()!;
@@ -140,7 +169,7 @@ const missingRequired = (command: RawCommand<any>, missingOpts: [string[], ...st
 	return new Error(msg);
 };
 
-const unrecognizedOptions = (command: RawCommand<any>, unrecognizedArgs: [string, ...string[]]) => {
+const unrecognizedOptions = (command: RawCommand<any, any, any>, unrecognizedArgs: [string, ...string[]]) => {
 	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
 
 	return new Error(msg);
@@ -304,11 +333,15 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
->(command: RawCommand<TOpts>) => commandCheckBypass(command);
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
+>(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>) => commandCheckBypass(command);
 
 const commandCheckBypass = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
->(command: RawCommand<TOpts>, ignoreReserved = true) => {
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+	TTransformed = TOptsData,
+>(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>, ignoreReserved = true) => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
@@ -725,7 +758,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	options = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
 	cmd = command;
 
-	await cmd.handler(options);
+	await cmd.handler(command.transform ? await command.transform(options) : options);
 	return undefined;
 };
 
@@ -740,9 +773,7 @@ export const runCli = async (commands: Command[], config?: BroCliConfig) => {
 	try {
 		await rawCli(commands, config);
 	} catch (e) {
-		if (e instanceof BroCliError) throw e;
-
-		console.log(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
+		console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
 
 		process.exit(1);
 	}

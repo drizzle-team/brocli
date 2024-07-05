@@ -9,6 +9,7 @@ export type {
 	HelpHandler,
 	InnerCommandParseRes,
 	RawCommand,
+	RawCommandUniversal,
 	RawCommandWithPositionals,
 	RawCommandWithSubcommands,
 } from './command-core';
