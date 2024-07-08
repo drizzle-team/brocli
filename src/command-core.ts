@@ -1,4 +1,3 @@
-import clone from 'clone';
 import { BroCliError } from './brocli-error';
 import { defaultTheme } from './help-themes';
 import {
@@ -6,12 +5,11 @@ import {
 	type GenericBuilderInternalsFields,
 	GenericBuilderInternalsLimited,
 	type OutputType,
-	positional,
 	type ProcessedBuilderConfig,
 	type ProcessedOptions,
-	string,
 	type TypeOf,
 } from './option-builder';
+import { clone } from './util';
 import { isInt } from './util';
 
 // Type area
@@ -84,7 +82,7 @@ export type RawCommandUniversal<
 		| Record<string, GenericBuilderInternals>
 		| undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
-	TTransformed = TOptsData,
+	TTransformed = TOptsData extends undefined ? undefined : TOptsData,
 > = {
 	name?: string;
 	aliases?: [string, ...string[]];
@@ -113,7 +111,7 @@ export type AnyRawCommand<
 	subcommands?: [Command, ...Command[]];
 };
 
-export type Command = {
+export type Command<TOptsType = any, TTransformedType = any> = {
 	name: string;
 	aliases?: [string, ...string[]];
 	description?: string;
@@ -134,6 +132,19 @@ export type CommandCandidate = {
 export type InnerCommandParseRes = {
 	command: Command | undefined;
 	args: string[];
+};
+
+export type CallTarget = 'help' | 'version' | 'handler';
+
+export type StringTestResult = {
+	success: boolean;
+	called?: CallTarget;
+	error?: unknown;
+};
+
+export type TestResult = {
+	success: boolean;
+	error?: unknown;
 };
 
 // Message area
@@ -335,13 +346,7 @@ export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 	TTransformed = TOptsData,
->(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>) => commandCheckBypass(command);
-
-const commandCheckBypass = <
-	TOpts extends Record<string, GenericBuilderInternals> | undefined,
-	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
-	TTransformed = TOptsData,
->(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>, ignoreReserved = true) => {
+>(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>): Command<TOptsData, TTransformed> => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
@@ -376,7 +381,7 @@ const commandCheckBypass = <
 	});
 
 	allNames.forEach((n, i) => {
-		if (!ignoreReserved && n === 'help') {
+		if (n === 'help') {
 			throw new BroCliError(
 				`Can't define command '${cmd.name}' - 'help' is a reserved name. If you want to redefine help message - do so in runCli's config.`,
 			);
@@ -451,6 +456,13 @@ const getCommand = (commands: Command[], args: string[]) => {
 
 	const firstCandidate = candidates[0]!;
 
+	if (firstCandidate.data === 'help') {
+		return {
+			command: 'help' as const,
+			args: removeByIndex(args, firstCandidate.originalIndex),
+		};
+	}
+
 	const { command, args: argsRes } = getCommandInner(commands, candidates, args);
 
 	if (!command) throw unknownCommand(firstCandidate.data);
@@ -475,6 +487,18 @@ const parseArg = (
 	const namePart = argSplit.shift();
 	const dataPart = hasEq ? argSplit.join('=') : nextArg;
 	let skipNext = !hasEq;
+
+	if (namePart === '--help' || namePart === '-h') {
+		return {
+			isHelp: true,
+		};
+	}
+
+	if (namePart === '--version' || namePart === '-v') {
+		return {
+			isVersion: true,
+		};
+	}
 
 	if (!arg.startsWith('-')) {
 		if (!positionals.length) return {};
@@ -574,7 +598,7 @@ const parseOptions = (
 	command: Command,
 	args: string[],
 	omitKeysOfUndefinedOptions?: boolean,
-): Record<string, OutputType> | undefined => {
+): Record<string, OutputType> | 'help' | 'version' | undefined => {
 	const options = command.options;
 
 	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>).map(
@@ -598,11 +622,16 @@ const parseOptions = (
 			name,
 			option,
 			skipNext,
+			isHelp,
+			isVersion,
 		} = parseArg(nonPositionalEntries, positionalEntries, arg, nextArg);
 		if (!option) unrecognizedArgsArr.push(arg.split('=')[0]!);
 		if (skipNext) ++i;
 
 		result[name!] = data;
+
+		if (isHelp) return 'help';
+		if (isVersion) return 'version';
 	}
 
 	for (const [optKey, option] of optEntries) {
@@ -627,32 +656,6 @@ const executeOrLog = async (target: string | Function | undefined) => {
 	if (!target || typeof target === 'string') console.log(target);
 	else await target();
 };
-
-const helpCommand = (commands: Command[], helpHandler: HelpHandler) =>
-	commandCheckBypass({
-		name: 'help',
-		description: 'List commands or command details',
-		options: {
-			command: string().alias('c', 'cmd').desc('Target command'),
-			pos: positional().desc('Target command'),
-		},
-		hidden: true,
-		handler: async (options) => {
-			const { command, pos } = options;
-
-			if (command === undefined && pos === undefined) {
-				return await helpHandler(commands);
-			}
-
-			const cmd = commands.find((e) => e.name === pos || e.aliases?.find((a) => a === pos))
-				?? commands.find((e) => e.name === command || e.aliases?.find((a) => a === command));
-			if (cmd) {
-				return cmd.help ? await executeOrLog(cmd.help) : await helpHandler(cmd);
-			}
-
-			return await helpHandler(commands);
-		},
-	}, true);
 
 export const getCommandNameRecursive = (command: Command): string =>
 	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
@@ -707,44 +710,36 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 
 const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
 
+const help = async (command: Command | string | undefined, commands: Command[], helpHandler: HelpHandler) =>
+	typeof command === 'object'
+		? command.help !== undefined
+			? await executeOrLog(command.help)
+			: await helpHandler(command)
+		: await helpHandler(commands);
+
 /**
  * Separated for testing purposes
  */
 export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
-	let options: Record<string, OutputType> | undefined;
-	let cmd: Command;
-
 	const processedCmds = validateCommands(commands);
 
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
 	const helpHandler = config?.help ?? defaultTheme;
 	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
-	const cmds = [...processedCmds, helpCommand(processedCmds, helpHandler)];
 
 	let args = argSource.slice(2, argSource.length);
 	if (!args.length) return await helpHandler(processedCmds);
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
-	if (helpIndex !== -1 && (helpIndex > 0 ? args[helpIndex - 1]?.startsWith('-') ? false : true : true)) {
-		let command: Command | undefined;
-		if (args[helpIndex + 1]?.startsWith('-')) {
-			command = getCommand(cmds, args).command;
-		} else {
-			const targetName = args[helpIndex + 1]!;
+	if (
+		helpIndex !== -1 && (helpIndex > 0
+			? args[helpIndex - 1]?.startsWith('-') && !args[helpIndex - 1]!.includes('=') ? false : true
+			: true)
+	) {
+		const command = getCommand(processedCmds, args).command;
 
-			command = cmds.find((cmd) => {
-				const names = cmd.aliases ? [cmd.name, ...cmd.aliases] : [cmd.name];
-
-				return names.find((n) => n === targetName);
-			});
-
-			command = command ?? getCommand(cmds, args).command;
-		}
-
-		return command
-			? command.help ? await executeOrLog(command.help) : await helpHandler(command)
-			: await helpHandler(processedCmds);
+		return help(command, processedCmds, helpHandler);
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
@@ -752,13 +747,23 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 		return await executeOrLog(version);
 	}
 
-	const { command, args: newArgs } = getCommand(cmds, args);
+	const { command, args: newArgs } = getCommand(processedCmds, args);
 	if (!command) return helpHandler(processedCmds);
 
-	options = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
-	cmd = command;
+	if (command === 'help') {
+		const { command: helpCommand } = getCommand(processedCmds, newArgs);
 
-	await cmd.handler(command.transform ? await command.transform(options) : options);
+		return help(helpCommand, processedCmds, helpHandler);
+	}
+
+	const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
+
+	if (optionResult === 'help') return await help(command, commands, helpHandler);
+	if (optionResult === 'version') return await executeOrLog(version);
+
+	if (optionResult) {
+		await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
+	}
 	return undefined;
 };
 
@@ -783,3 +788,83 @@ export const handler = <TOpts extends Record<string, GenericBuilderInternals>>(
 	options: TOpts,
 	handler: CommandHandler<TOpts>,
 ) => handler;
+
+const cliParseArgs = (args: string): string[] => {
+	return [];
+};
+
+export const commandTestString = async (
+	command: Command,
+	args: string,
+): Promise<StringTestResult> => {
+	try {
+		const cliParsedArgs = cliParseArgs(args);
+
+		const options = parseOptions(command, cliParsedArgs);
+
+		if (options === 'help') {
+			return {
+				success: true,
+				called: 'help',
+			};
+		}
+
+		if (options === 'version') {
+			return {
+				success: true,
+				called: 'version',
+			};
+		}
+
+		await command.handler(command.transform ? await command.transform(options) : options);
+
+		return {
+			success: true,
+			called: 'handler',
+		};
+	} catch (e) {
+		return {
+			success: false,
+			called: undefined,
+			error: e,
+		};
+	}
+};
+
+export const commandTestObj = async <TOpts, TTransformed>(
+	command: Command<TOpts, TTransformed>,
+	args: TOpts,
+): Promise<TestResult> => {
+	try {
+		await command.handler(command.transform ? await command.transform(args as any) : args);
+
+		return {
+			success: true,
+			error: undefined,
+		};
+	} catch (e) {
+		return {
+			success: false,
+			error: e,
+		};
+	}
+};
+
+export const commandTestTransformless = async <TOpts, TTransformed>(
+	command: Command<TOpts, TTransformed>,
+	args: TTransformed,
+): Promise<TestResult> => {
+	try {
+		await command.handler(args as any);
+
+		return {
+			success: true,
+			error: undefined,
+		};
+	} catch (e) {
+		return {
+			success: false,
+			error: e,
+		};
+	}
+};
