@@ -1,6 +1,6 @@
 import { rawCli as runCli } from '@/command-core';
 import { boolean, type Command, command, handler, string, type TypeOf } from '@/index';
-import { beforeEach, describe, expect, expectTypeOf, vi } from 'vitest';
+import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 
 const getArgs = (...args: string[]) => [
 	process.argv[0]!, // executing application path

@@ -12,8 +12,9 @@ export type {
 	RawCommandUniversal,
 	RawCommandWithPositionals,
 	RawCommandWithSubcommands,
+	TestResult,
 } from './command-core';
-export { command, handler, runCli } from './command-core';
+export { command, handler, runCli, test } from './command-core';
 export type {
 	BuilderConfig,
 	BuilderConfigLimited,

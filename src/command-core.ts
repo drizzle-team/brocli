@@ -1,3 +1,4 @@
+import { parse as parseQuotes } from 'shell-quote';
 import { BroCliError } from './brocli-error';
 import { defaultTheme } from './help-themes';
 import {
@@ -9,8 +10,7 @@ import {
 	type ProcessedOptions,
 	type TypeOf,
 } from './option-builder';
-import { clone } from './util';
-import { isInt } from './util';
+import { clone, isInt } from './util';
 
 // Type area
 export type HelpHandler = (calledFor: Command | Command[]) => any;
@@ -134,17 +134,14 @@ export type InnerCommandParseRes = {
 	args: string[];
 };
 
-export type CallTarget = 'help' | 'version' | 'handler';
-
-export type StringTestResult = {
-	success: boolean;
-	called?: CallTarget;
-	error?: unknown;
-};
-
-export type TestResult = {
-	success: boolean;
-	error?: unknown;
+export type TestResult<THandlerInput> = {
+	type: 'handler';
+	options: THandlerInput;
+} | {
+	type: 'help' | 'version';
+} | {
+	type: 'error';
+	error: unknown;
 };
 
 // Message area
@@ -346,7 +343,7 @@ export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 	TTransformed = TOptsData,
->(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>): Command<TOptsData, TTransformed> => {
+>(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>): Command<TOptsData, Awaited<TTransformed>> => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
@@ -803,81 +800,36 @@ export const handler = <TOpts extends Record<string, GenericBuilderInternals>>(
 	handler: CommandHandler<TOpts>,
 ) => handler;
 
-const cliParseArgs = (args: string): string[] => {
-	return [];
+const shellArgs = (str: string) => {
+	const spaces: string[] = str.match(/"[^"]+"|'[^']+'|\S+/g) ?? [];
+
+	return spaces.flatMap((s) => parseQuotes(s)).map((s) => s.toString());
 };
 
-export const commandTestString = async (
-	command: Command,
+export const test = async <TOpts, THandlerInput>(
+	command: Command<TOpts, THandlerInput>,
 	args: string,
-): Promise<StringTestResult> => {
+): Promise<TestResult<THandlerInput>> => {
 	try {
-		const cliParsedArgs = cliParseArgs(args);
+		const cliParsedArgs: string[] = shellArgs(args);
+
+		console.log(cliParsedArgs);
 
 		const options = parseOptions(command, cliParsedArgs);
 
-		if (options === 'help') {
+		if (options === 'help' || options === 'version') {
 			return {
-				success: true,
-				called: 'help',
+				type: options,
 			};
 		}
 
-		if (options === 'version') {
-			return {
-				success: true,
-				called: 'version',
-			};
-		}
-
-		await command.handler(command.transform ? await command.transform(options) : options);
-
 		return {
-			success: true,
-			called: 'handler',
+			options: command.transform ? await command.transform(options) : options,
+			type: 'handler',
 		};
 	} catch (e) {
 		return {
-			success: false,
-			called: undefined,
-			error: e,
-		};
-	}
-};
-
-export const commandTestObj = async <TOpts, TTransformed>(
-	command: Command<TOpts, TTransformed>,
-	args: TOpts,
-): Promise<TestResult> => {
-	try {
-		await command.handler(command.transform ? await command.transform(args as any) : args);
-
-		return {
-			success: true,
-			error: undefined,
-		};
-	} catch (e) {
-		return {
-			success: false,
-			error: e,
-		};
-	}
-};
-
-export const commandTestTransformless = async <TOpts, TTransformed>(
-	command: Command<TOpts, TTransformed>,
-	args: TTransformed,
-): Promise<TestResult> => {
-	try {
-		await command.handler(args as any);
-
-		return {
-			success: true,
-			error: undefined,
-		};
-	} catch (e) {
-		return {
-			success: false,
+			type: 'error',
 			error: e,
 		};
 	}

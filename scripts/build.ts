@@ -9,6 +9,7 @@ await build({
 	splitting: false,
 	sourcemap: true,
 	dts: true,
+	bundle: true,
 	format: ['cjs', 'esm'],
 	outExtension(ctx) {
 		if (ctx.format === 'cjs') {
