@@ -14,7 +14,7 @@ export const defaultTheme: HelpHandler = (calledFor) => {
 		console.log(`Here's the list of all available commands:`);
 		console.table(tableCmds);
 		console.log(
-			'To read the details about any particular command type: help [commandName] | help --command=<commandName> | help -c <comandName>',
+			'To read the details about any particular command type: [commandName] --help',
 		);
 	} else {
 		const options = calledFor.options

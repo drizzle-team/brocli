@@ -130,10 +130,6 @@ const commandOptions = {
     // And so on... 
 }
 
-const commandHandler = (options: TypeOf<typeof commandOptions>) => {
-    // Your logic goes here...
-}
-
 const commands: Command[] = []
 
 commands.push(command({
@@ -142,18 +138,29 @@ commands.push(command({
     description: 'Description goes here',
     hidden: false,
     options: commandOptions,
-    handler: commandHandler,
-    help: () => 'This command works like this: ...'
+    transform: (options) => {
+        // Preprocess options here...
+        return processedOptions
+    },
+    handler: (processedOptions) => {
+        // Your logic goes here...
+    },
+    help: () => 'This command works like this: ...',
+    subcommands: [
+        command(
+            // You can define subcommands like this
+        )
+    ]
 }));
 ```
 
 Parameters:  
 
 -   `name` - name by which command is searched in cli args  
-    :warning: - must not start with `-` character and be unique per command collection  
+    :warning: - must not start with `-` character, be equal to [`true`, `false`, `0`, `1`] (case-insensitive) and be unique per command collection  
 
 -   `aliases` - aliases by which command is searched in cli args  
-    :warning: - must not start with `-` character and be unique per command collection  
+    :warning: - must not start with `-` character, be equal to [`true`, `false`, `0`, `1`] (case-insensitive) and be unique per command collection  
 
 -   `description` - description for command to be displayed in `help` command  
 
@@ -161,9 +168,15 @@ Parameters:
 
 -   `options` - object containing command options created using `string()` and `boolean()` functions  
 
+-   `transform` - optional function to preprocess options before they are passed to handler    
+    :warning: - type of return mutates type of handler's input  
+
 -   `handler` - function, which will be executed in case of successful option parse  
 
 -   `help` - function or string, which will be executed or printed when help is called for this command
+
+-   `subcommands` - subcommands for command    
+    :warning: - command can't have subcommands and `positional` options at the same time  
 
 ### Running commands
 
@@ -211,5 +224,5 @@ runCli(commands, {
 ## CLI
 
 In `BroCLI`, command doesn't have to be the first argument, instead it may be contained in any order.  
-To make this possible, hovewer, option that's stated right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>`    
+To make this possible, hovewer, option that's stated right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>` (does not apply to reserved flags: [ `--help` | `-h` | `--version` | `-v`])    
 Options are parsed in strict mode, meaning that having any unrecognized options will result in an error.     

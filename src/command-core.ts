@@ -387,6 +387,13 @@ export const command = <
 			);
 		}
 
+		const lCaseName = n?.toLowerCase();
+		if (lCaseName === '0' || lCaseName === '1' || lCaseName === 'true' || lCaseName === 'false') {
+			throw new BroCliError(
+				`Can't define command '${cmd.name}' - '${n}' is a reserved for boolean values name!`,
+			);
+		}
+
 		const idx = allNames.findIndex((an) => an === n);
 
 		if (idx !== i) throw new BroCliError(`Can't define command '${cmd.name}' - duplicate alias '${n}'!`);
@@ -435,6 +442,13 @@ const getCommand = (commands: Command[], args: string[]) => {
 
 	for (let i = 0; i < args.length; ++i) {
 		const arg = args[i]!;
+		if (arg === '--help' || arg === '-h' || arg === '--version' || arg === '-v') {
+			const lCaseNext = args[i + 1]?.toLowerCase();
+			if (lCaseNext === '0' || lCaseNext === '1' || lCaseNext === 'true' || lCaseNext === 'false') ++i;
+
+			continue;
+		}
+
 		if (arg?.startsWith('-')) {
 			if (!arg.includes('=')) ++i;
 

@@ -28,8 +28,11 @@
     >-f false --flag4 --flag2=true -s="string value" --string stringvalue --flag3 true command
     ><empty prompt> - calls help
     >help - calls help
-    >help -c <command> - calls command's help
-    >help --command=<command> - calls command's help
+    >help <command> - calls command's help
+    >help <command> <subcommand> - calls subcommand's help
     >--help (at any position) - calls help
     >--help <command> - calls command's help
+    >--help <command> <subcommand> - calls subcommand's help
     ><command> --help - calls command's help
+    ><command> --help <subcommand> - calls subcommand's help
+    ><command> <subcommand> --help - calls subcommand's help
