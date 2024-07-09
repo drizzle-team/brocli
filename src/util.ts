@@ -14,21 +14,21 @@ export const clone = <T>(data: T, parent?: any): T => {
 			}
 
 			const origData = Object.entries(data);
-	
-			let hasParent = false
-			const res: Record<string, any> = {}
+
+			let hasParent = false;
+			const res: Record<string, any> = {};
 			for (const [key, value] of origData) {
-				if(key === 'parent') {
-					hasParent = true
-					continue
-				} 
+				if (key === 'parent') {
+					hasParent = true;
+					continue;
+				}
 
 				res[key] = clone(value, res);
 			}
 
-			if(hasParent) res['parent'] = parent
+			if (hasParent) res['parent'] = parent;
 
-			return res as T
+			return res as T;
 		}
 
 		case 'function': {

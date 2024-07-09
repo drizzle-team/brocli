@@ -311,6 +311,12 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 	return Object.fromEntries(entries) as ProcessedOptions<any>;
 };
 
+const assignParent = (parent: Command, subcommands: Command[]) =>
+	subcommands.forEach((e) => {
+		e.parent = parent;
+		if (e.subcommands) assignParent(e, e.subcommands);
+	});
+
 export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
@@ -367,6 +373,8 @@ export const command = <
 
 		if (idx !== i) throw new BroCliError(`Can't define command '${cmd.name}' - duplicate alias '${n}'!`);
 	});
+
+	if (cmd.subcommands) assignParent(cmd, cmd.subcommands);
 
 	return cmd;
 };
