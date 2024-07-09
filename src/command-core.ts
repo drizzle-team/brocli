@@ -23,11 +23,14 @@ export type CommandHandler<
 	options: TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 ) => any;
 
+export type EventType = 'pre' | 'post';
+
 export type BroCliConfig = {
 	argSource?: string[];
 	help?: HelpHandler;
 	version?: string | Function;
 	omitKeysOfUndefinedOptions?: boolean;
+	hook?: (event: EventType, command: Command) => any;
 };
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
@@ -773,7 +776,9 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	if (optionResult === 'version') return await executeOrLog(version);
 
 	if (optionResult) {
+		if (config?.hook) await config.hook('pre', command);
 		await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
+		if (config?.hook) await config.hook('post', command);
 	}
 	return undefined;
 };
@@ -812,9 +817,6 @@ export const test = async <TOpts, THandlerInput>(
 ): Promise<TestResult<THandlerInput>> => {
 	try {
 		const cliParsedArgs: string[] = shellArgs(args);
-
-		console.log(cliParsedArgs);
-
 		const options = parseOptions(command, cliParsedArgs);
 
 		if (options === 'help' || options === 'version') {
