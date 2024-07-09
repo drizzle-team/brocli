@@ -5,7 +5,7 @@ export function isInt(value: number) {
 /**
  * Warning: do not use on classes - breaks instanceof, this
  */
-export const clone = <T>(data: T): T => {
+export const clone = <T>(data: T, parent?: any): T => {
 	switch (typeof data) {
 		case 'object': {
 			if (data === null) return data;
@@ -14,13 +14,21 @@ export const clone = <T>(data: T): T => {
 			}
 
 			const origData = Object.entries(data);
-			const cloneData: typeof origData = [];
-
+	
+			let hasParent = false
+			const res: Record<string, any> = {}
 			for (const [key, value] of origData) {
-				cloneData.push([key, clone(value)]);
+				if(key === 'parent') {
+					hasParent = true
+					continue
+				} 
+
+				res[key] = clone(value, res);
 			}
 
-			return Object.fromEntries(cloneData) as T;
+			if(hasParent) res['parent'] = parent
+
+			return res as T
 		}
 
 		case 'function': {

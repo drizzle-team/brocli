@@ -4,7 +4,6 @@ import { defaultTheme } from './help-themes';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
-	GenericBuilderInternalsLimited,
 	type OutputType,
 	type ProcessedBuilderConfig,
 	type ProcessedOptions,
@@ -23,6 +22,18 @@ export type CommandHandler<
 	options: TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 ) => any;
 
+export type CommandInfo = {
+	name: string;
+	aliases?: [string, ...string[]];
+	description?: string;
+	hidden?: boolean;
+	options?: Record<string, ProcessedBuilderConfig>;
+	metaInfo?: string;
+	subcommands?: CommandsInfo;
+};
+
+export type CommandsInfo = Record<string, CommandInfo>;
+
 export type EventType = 'pre' | 'post';
 
 export type BroCliConfig = {
@@ -40,51 +51,6 @@ export type RawCommand<
 		| Record<string, GenericBuilderInternals>
 		| undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
-	TTransformed = TOptsData,
-> = TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined
-	? RawCommandWithSubcommands<TOpts, TOptsData, TTransformed>
-	: RawCommandWithPositionals<TOpts, TOptsData, TTransformed>;
-
-export type RawCommandWithPositionals<
-	TOpts extends Record<string, GenericBuilderInternals> | undefined =
-		| Record<string, GenericBuilderInternals>
-		| undefined,
-	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
-	TTransformed = TOptsData,
-> = {
-	name?: string;
-	aliases?: [string, ...string[]];
-	description?: string;
-	hidden?: boolean;
-	options?: TOpts;
-	help?: string | Function;
-	transform?: (options: TOptsData) => TTransformed;
-	handler?: (options: Awaited<TTransformed>) => any;
-};
-
-export type RawCommandWithSubcommands<
-	TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined =
-		| Record<string, GenericBuilderInternalsLimited>
-		| undefined,
-	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
-	TTransformed = TOptsData,
-> = {
-	name?: string;
-	aliases?: [string, ...string[]];
-	description?: string;
-	hidden?: boolean;
-	options?: TOpts;
-	help?: string | Function;
-	transform?: (options: TOptsData) => TTransformed;
-	handler?: (options: Awaited<TTransformed>) => any;
-	subcommands?: [Command, ...Command[]];
-};
-
-export type RawCommandUniversal<
-	TOpts extends Record<string, GenericBuilderInternals> | undefined =
-		| Record<string, GenericBuilderInternals>
-		| undefined,
-	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 	TTransformed = TOptsData extends undefined ? undefined : TOptsData,
 > = {
 	name?: string;
@@ -96,6 +62,7 @@ export type RawCommandUniversal<
 	transform?: (options: TOptsData) => TTransformed;
 	handler?: (options: Awaited<TTransformed>) => any;
 	subcommands?: [Command, ...Command[]];
+	metaInfo?: string;
 };
 
 export type AnyRawCommand<
@@ -112,6 +79,7 @@ export type AnyRawCommand<
 	transform?: GenericCommandHandler;
 	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
+	metaInfo?: string;
 };
 
 export type Command<TOptsType = any, TTransformedType = any> = {
@@ -125,6 +93,7 @@ export type Command<TOptsType = any, TTransformedType = any> = {
 	handler: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 	parent?: Command;
+	metaInfo?: string;
 };
 
 export type CommandCandidate = {
@@ -346,7 +315,7 @@ export const command = <
 	TOpts extends Record<string, GenericBuilderInternals> | undefined,
 	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
 	TTransformed = TOptsData,
->(command: RawCommandUniversal<TOpts, TOptsData, TTransformed>): Command<TOptsData, Awaited<TTransformed>> => {
+>(command: RawCommand<TOpts, TOptsData, TTransformed>): Command<TOptsData, Awaited<TTransformed>> => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
@@ -790,7 +759,7 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
  *
  * @param argSource - source of cli arguments, optionally passed as a parameter for testing purposes and compatibility with custom environments
  */
-export const runCli = async (commands: Command[], config?: BroCliConfig) => {
+export const run = async (commands: Command[], config?: BroCliConfig) => {
 	try {
 		await rawCli(commands, config);
 	} catch (e) {
@@ -835,4 +804,22 @@ export const test = async <TOpts, THandlerInput>(
 			error: e,
 		};
 	}
+};
+
+export const commandsInfo = (
+	commands: Command[],
+): CommandsInfo => {
+	const validated = validateCommands(commands);
+
+	return Object.fromEntries(validated.map((c) => [c.name, {
+		name: c.name,
+		aliases: c.aliases,
+		description: c.description,
+		isHidden: c.hidden,
+		options: c.options
+			? Object.fromEntries(Object.entries(c.options).map(([key, opt]) => [key, opt.config]))
+			: undefined,
+		metaInfo: c.metaInfo,
+		subcommands: c.subcommands ? commandsInfo(c.subcommands) : undefined,
+	}]));
 };

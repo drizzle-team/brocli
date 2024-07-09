@@ -5,16 +5,16 @@ export type {
 	Command,
 	CommandCandidate,
 	CommandHandler,
+	CommandInfo,
+	CommandsInfo,
+	EventType,
 	GenericCommandHandler,
 	HelpHandler,
 	InnerCommandParseRes,
 	RawCommand,
-	RawCommandUniversal,
-	RawCommandWithPositionals,
-	RawCommandWithSubcommands,
 	TestResult,
 } from './command-core';
-export { command, handler, runCli, test } from './command-core';
+export { command, commandsInfo, handler, run, test } from './command-core';
 export type {
 	BuilderConfig,
 	BuilderConfigLimited,

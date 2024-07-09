@@ -180,10 +180,10 @@ Parameters:
 
 ### Running commands
 
-After defining commands, you're going to need to execute `runCli()` function to start command execution
+After defining commands, you're going to need to execute `run()` function to start command execution
 
 ```Typescript
-import { command, type Command, runCli, string, boolean, type TypeOf } from '@drizzle-team/brocli'
+import { command, type Command, run, string, boolean, type TypeOf } from '@drizzle-team/brocli'
 
 const commandOptions = {
     opt1: string(),
@@ -208,7 +208,7 @@ commands.push(command({
 
 // And so on...
 
-runCli(commands, {
+run(commands, {
     name: 'my-program',
     version: '1.0.0',
     help: () => {
@@ -218,7 +218,7 @@ runCli(commands, {
 })
 ```
 
-:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source to a second argument of `runCli()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.  
+:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source to a second argument of `run()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.  
 :speech_balloon: - custom help and version output handlers or strings can be passed to a second argument to replace default brocli outputs for those operations with your own.  
 
 ## CLI
