@@ -1,3 +1,4 @@
+import clone from 'clone';
 import { parse as parseQuotes } from 'shell-quote';
 import { BroCliError } from './brocli-error';
 import { defaultTheme } from './help-themes';
@@ -9,7 +10,7 @@ import {
 	type ProcessedOptions,
 	type TypeOf,
 } from './option-builder';
-import { clone, isInt } from './util';
+import { isInt } from './util';
 
 // Type area
 export type HelpHandler = (calledFor: Command | Command[]) => any;
@@ -374,7 +375,10 @@ export const command = <
 		if (idx !== i) throw new BroCliError(`Can't define command '${cmd.name}' - duplicate alias '${n}'!`);
 	});
 
-	if (cmd.subcommands) assignParent(cmd, cmd.subcommands);
+	if (cmd.subcommands) {
+		cmd.subcommands = clone(cmd.subcommands);
+		assignParent(cmd, cmd.subcommands);
+	}
 
 	return cmd;
 };
@@ -652,14 +656,10 @@ export const getCommandNameRecursive = (command: Command): string =>
 	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
 
 const validateCommands = (commands: Command[], parent?: Command) => {
-	const cloned = parent ? commands : clone(commands);
-
 	const storedNames: Record<string, [string, ...string[]]> = {};
 
-	for (const cmd of cloned) {
+	for (const cmd of commands) {
 		const storageVals = Object.values(storedNames);
-
-		cmd.parent = parent;
 
 		for (const storage of storageVals) {
 			const nameOccupier = storage.find((e) => e === cmd.name);
@@ -696,7 +696,7 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 		if (cmd.subcommands) cmd.subcommands = validateCommands(cmd.subcommands, cmd) as [Command, ...Command[]];
 	}
 
-	return cloned;
+	return commands;
 };
 
 const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
