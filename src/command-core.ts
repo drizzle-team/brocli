@@ -325,9 +325,7 @@ export const command = <
 >(command: RawCommand<TOpts, TOptsData, TTransformed>): Command<TOptsData, Awaited<TTransformed>> => {
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
-	const processedOptions = command.options ? validateOptions(command.options) : undefined;
 	const cmd: Command = clone(command) as any;
-
 	if (
 		(<AnyRawCommand> command).subcommands && command.options
 		&& Object.values(command.options).find((opt) => opt._.config.type === 'positional')
@@ -336,6 +334,8 @@ export const command = <
 			`Can't define command '${cmd.name}' - command can't have subcommands and positional args at the same time!`,
 		);
 	}
+
+	const processedOptions = command.options ? validateOptions(command.options) : undefined;
 	cmd.options = processedOptions;
 
 	cmd.name = cmd.name ?? cmd.aliases?.shift();
