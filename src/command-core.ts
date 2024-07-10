@@ -326,7 +326,7 @@ export const command = <
 	const allNames = command.aliases ? [command.name, ...command.aliases] : [command.name];
 
 	const processedOptions = command.options ? validateOptions(command.options) : undefined;
-	const cmd: Command = command as any;
+	const cmd: Command = clone(command) as any;
 
 	if (
 		(<AnyRawCommand> command).subcommands && command.options
@@ -376,7 +376,6 @@ export const command = <
 	});
 
 	if (cmd.subcommands) {
-		cmd.subcommands = clone(cmd.subcommands);
 		assignParent(cmd, cmd.subcommands);
 	}
 
