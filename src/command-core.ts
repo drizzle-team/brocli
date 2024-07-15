@@ -1,6 +1,7 @@
 import clone from 'clone';
 import { parse as parseQuotes } from 'shell-quote';
 import { BroCliError } from './brocli-error';
+import type { EventHandler } from './event-handler';
 import { defaultTheme } from './help-themes';
 import {
 	type GenericBuilderInternals,
@@ -13,8 +14,6 @@ import {
 import { isInt } from './util';
 
 // Type area
-export type HelpHandler = (calledFor: Command | Command[]) => any;
-
 export type CommandHandler<
 	TOpts extends Record<string, GenericBuilderInternals> | undefined =
 		| Record<string, GenericBuilderInternals>
@@ -35,14 +34,16 @@ export type CommandInfo = {
 
 export type CommandsInfo = Record<string, CommandInfo>;
 
-export type EventType = 'pre' | 'post';
+export type EventType = 'before' | 'after';
 
 export type BroCliConfig = {
+	programName?: string;
 	argSource?: string[];
-	help?: HelpHandler;
+	help?: string | Function;
 	version?: string | Function;
 	omitKeysOfUndefinedOptions?: boolean;
 	hook?: (event: EventType, command: Command) => any;
+	eventHandler?: EventHandler;
 };
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
@@ -57,6 +58,7 @@ export type RawCommand<
 	name?: string;
 	aliases?: [string, ...string[]];
 	description?: string;
+	longDescription?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
@@ -74,6 +76,7 @@ export type AnyRawCommand<
 	name?: string;
 	aliases?: [string, ...string[]];
 	description?: string;
+	longDescription?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
@@ -87,11 +90,12 @@ export type Command<TOptsType = any, TTransformedType = any> = {
 	name: string;
 	aliases?: [string, ...string[]];
 	description?: string;
+	longDescription?: string;
 	hidden?: boolean;
 	options?: ProcessedOptions;
 	help?: string | Function;
 	transform?: GenericCommandHandler;
-	handler: GenericCommandHandler;
+	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 	parent?: Command;
 	metaInfo?: string;
@@ -343,8 +347,6 @@ export const command = <
 	if (!cmd.name) throw new BroCliError(`Can't define command without name!`);
 
 	cmd.aliases = cmd.aliases?.length ? cmd.aliases : undefined;
-
-	if (!cmd.handler) throw new BroCliError(`Can't define command '${cmd.name}' - command must have a handler!`);
 
 	if (cmd.name.startsWith('-')) {
 		throw new BroCliError(`Can't define command '${cmd.name}' - command name can't start with '-'!`);
@@ -643,7 +645,7 @@ const parseOptions = (
 	if (missingRequiredArr.length) throw missingRequired(command, missingRequiredArr as [string[], ...string[][]]);
 	if (unrecognizedArgsArr.length) throw unrecognizedOptions(command, unrecognizedArgsArr as [string, ...string[]]);
 
-	return result;
+	return Object.keys(result).length ? result : undefined;
 };
 
 const executeOrLog = async (target: string | Function | undefined) => {
@@ -700,12 +702,20 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 
 const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
 
-const help = async (command: Command | string | undefined, commands: Command[], helpHandler: HelpHandler) =>
+const help = async (command: Command | string | undefined, commands: Command[], helpHandler: EventHandler) =>
 	typeof command === 'object'
 		? command.help !== undefined
 			? await executeOrLog(command.help)
-			: await helpHandler(command)
-		: await helpHandler(commands);
+			: await helpHandler({
+				type: 'commandHelp',
+				command,
+				args: [],
+			})
+		: await helpHandler({
+			type: 'globalHelp',
+			commands: commands,
+			args: [],
+		});
 
 /**
  * Separated for testing purposes
@@ -751,12 +761,13 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	if (optionResult === 'help') return await help(command, commands, helpHandler);
 	if (optionResult === 'version') return await executeOrLog(version);
 
-	if (optionResult) {
-		if (config?.hook) await config.hook('pre', command);
+	if (command.handler) {
+		if (config?.hook) await config.hook('before', command);
 		await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
-		if (config?.hook) await config.hook('post', command);
+		if (config?.hook) await config.hook('after', command);
+	} else {
+		await help(command, processedCmds, helpHandler);
 	}
-	return undefined;
 };
 
 /**

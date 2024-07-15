@@ -11,9 +11,12 @@
 
  # Urgent
  - Complete help 
- - Make --help work with subcommands
- - Testing API
  - Remake tests
+
+ # Turso
+ - Add short\full description
+ - Default no handler to command help
+ - `Usage` section, present only when there is a handler
 
  # Scenarios
 
