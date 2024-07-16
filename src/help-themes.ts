@@ -1,7 +1,7 @@
-import type { Command, HelpHandler } from './command-core';
+import type { Command } from './command-core';
 import type { ProcessedOptions } from './option-builder';
 
-export const defaultTheme: HelpHandler = (calledFor) => {
+export const defaultTheme = (calledFor: Command | Command[]) => {
 	if (Array.isArray(calledFor)) {
 		const cmds = calledFor.filter((cmd) => !cmd.hidden);
 
@@ -195,7 +195,7 @@ const commandHelp = (command: Command) => {
 };
 
 // Theme core
-export const defaultThemeWIP: HelpHandler = (calledFor) => {
+export const defaultThemeWIP = (calledFor: Command | Command[]) => {
 	if (Array.isArray(calledFor)) {
 		rootHelp(calledFor);
 	} else {

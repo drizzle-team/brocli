@@ -9,12 +9,25 @@ export type {
 	CommandsInfo,
 	EventType,
 	GenericCommandHandler,
-	HelpHandler,
 	InnerCommandParseRes,
 	RawCommand,
 	TestResult,
 } from './command-core';
 export { command, commandsInfo, handler, run, test } from './command-core';
+export type {
+	BroCliEvent,
+	CommandHelpEvent,
+	EventHandler,
+	GlobalHelpEvent,
+	MissingArgsEvent,
+	UnknownCommandEvent,
+	UnknownErrorEvent,
+	UnknownSubcommandEvent,
+	UnrecognizedArgsEvent,
+	ValidationErrorEvent,
+	ValidationViolation,
+	VersionEvent,
+} from './event-handler';
 export type {
 	BuilderConfig,
 	BuilderConfigLimited,

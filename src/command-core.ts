@@ -1,8 +1,7 @@
 import clone from 'clone';
 import { parse as parseQuotes } from 'shell-quote';
 import { BroCliError } from './brocli-error';
-import type { EventHandler } from './event-handler';
-import { defaultTheme } from './help-themes';
+import { defaultEventHandler, type EventHandler, eventHandlerWrapper } from './event-handler';
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
@@ -132,9 +131,6 @@ const unknownSubcommand = (command: Command, caller: string) => {
 	const name = getCommandNameRecursive(command);
 
 	const msg = `Unknown command: ${name} ${caller}.\nType '${name} --help' to get the help on command.`;
-	new Error(
-		msg,
-	);
 
 	return new Error(msg);
 };
@@ -725,11 +721,19 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
-	const helpHandler = config?.help ?? defaultTheme;
+	const help = config?.help;
 	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
+	const eventHandler = config?.eventHandler ? eventHandlerWrapper(config.eventHandler) : defaultEventHandler;
 
 	let args = argSource.slice(2, argSource.length);
-	if (!args.length) return await helpHandler(processedCmds);
+	if (!args.length) {
+		return await eventHandler({
+			type: 'globalHelp',
+			commands: processedCmds,
+			help,
+			args,
+		});
+	}
 
 	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 	if (
@@ -739,34 +743,91 @@ export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
 	) {
 		const command = getCommand(processedCmds, args).command;
 
-		return help(command, processedCmds, helpHandler);
+		if (typeof command === 'object') {
+			return await eventHandler({
+				type: 'commandHelp',
+				command,
+				args,
+			});
+		} else {
+			return await eventHandler({
+				type: 'globalHelp',
+				commands: processedCmds,
+				help,
+				args,
+			});
+		}
 	}
 
 	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
 	if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
-		return await executeOrLog(version);
+		return await eventHandler({
+			type: 'version',
+			version,
+		});
 	}
 
 	const { command, args: newArgs } = getCommand(processedCmds, args);
-	if (!command) return helpHandler(processedCmds);
+	if (!command) {
+		return await eventHandler({
+			type: 'globalHelp',
+			commands: processedCmds,
+			help,
+			args,
+		});
+	}
 
 	if (command === 'help') {
-		const { command: helpCommand } = getCommand(processedCmds, newArgs);
+		let helpCommand: Command | 'help' | undefined;
+		let newestArgs: string[] = newArgs;
 
-		return help(helpCommand, processedCmds, helpHandler);
+		do {
+			const res = getCommand(processedCmds, newestArgs);
+			helpCommand = res.command;
+			newestArgs = res.args;
+		} while (helpCommand === 'help');
+
+		return helpCommand
+			? await eventHandler({
+				type: 'commandHelp',
+				command: helpCommand,
+				args,
+			})
+			: await eventHandler({
+				type: 'globalHelp',
+				commands: processedCmds,
+				help,
+				args,
+			});
 	}
 
 	const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
 
-	if (optionResult === 'help') return await help(command, commands, helpHandler);
-	if (optionResult === 'version') return await executeOrLog(version);
+	if (optionResult === 'help') {
+		return await eventHandler({
+			type: 'commandHelp',
+			command,
+			args,
+		});
+	}
+	if (optionResult === 'version') {
+		return await eventHandler({
+			type: 'version',
+			version,
+		});
+	}
 
 	if (command.handler) {
 		if (config?.hook) await config.hook('before', command);
 		await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
 		if (config?.hook) await config.hook('after', command);
+		return undefined;
 	} else {
-		await help(command, processedCmds, helpHandler);
+		return await eventHandler({
+			type: 'commandHelp',
+			command,
+			args,
+		});
 	}
 };
 
