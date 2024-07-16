@@ -1,32 +1,28 @@
 import { type Command, command, getCommandNameRecursive } from './command-core';
 import { defaultTheme } from './help-themes';
-import type { GenericBuilderInternals, OutputType } from './option-builder';
+import type { ProcessedBuilderConfig } from './option-builder';
 
 export type CommandHelpEvent = {
 	type: 'commandHelp';
 	command: Command;
-	args: string[];
 };
 
 export type GlobalHelpEvent = {
 	type: 'globalHelp';
 	help?: string | Function;
 	commands: Command[];
-	args: string[];
 };
 
 export type MissingArgsEvent = {
 	type: 'missingArgsErr';
 	command: Command;
-	received: Record<string, OutputType>;
-	missing: GenericBuilderInternals[];
+	missing: [string[], ...string[][]];
 };
 
 export type UnrecognizedArgsEvent = {
 	type: 'unrecognizedArgsErr';
 	command: Command;
-	received: Record<string, OutputType>;
-	unrecognized: string[];
+	unrecognized: [string, ...string[]];
 };
 
 export type UnknownCommandEvent = {
@@ -57,12 +53,13 @@ export type ValidationViolation =
 	| 'Invalid boolean syntax'
 	| 'Invalid string syntax'
 	| 'Invalid number syntax'
+	| 'Invalid number value'
 	| 'Enum violation';
 
 export type ValidationErrorEvent = {
 	type: 'validationError';
 	command: Command;
-	option: GenericBuilderInternals;
+	option: ProcessedBuilderConfig;
 	offender: {
 		namePart: string;
 		dataPart?: string;
@@ -134,7 +131,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		}
 
 		case 'missingArgsErr': {
-			const missingOpts = event.missing.map((e) => [e._.config.name, ...e._.config.aliases]);
+			const missingOpts = event.missing;
 
 			const msg = `Command '${command.name}' is missing following required options: ${
 				missingOpts.map((opt) => {
@@ -164,7 +161,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			const matchedName = event.offender.namePart;
 			const data = event.offender.dataPart;
-			const option = event.option._.config;
+			const option = event.option;
 
 			switch (event.violation) {
 				case 'Above max': {
@@ -208,6 +205,11 @@ export const defaultEventHandler: EventHandler = async (event) => {
 					msg =
 						`Invalid syntax: number type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`;
 
+					break;
+				}
+
+				case 'Invalid number value': {
+					msg = `Invalid value: number type argument '${matchedName}' expects a number as an input, got: ${data}`;
 					break;
 				}
 

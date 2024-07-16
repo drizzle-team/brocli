@@ -36,7 +36,7 @@ export type CommandsInfo = Record<string, CommandInfo>;
 export type EventType = 'before' | 'after';
 
 export type BroCliConfig = {
-	programName?: string;
+	cliName?: string;
 	argSource?: string[];
 	help?: string | Function;
 	version?: string | Function;
@@ -120,101 +120,6 @@ export type TestResult<THandlerInput> = {
 	error: unknown;
 };
 
-// Message area
-const unknownCommand = (caller: string) => {
-	const msg = `Unknown command: '${caller}'.\nType '--help' to get help on the cli.`;
-
-	return new Error(msg);
-};
-
-const unknownSubcommand = (command: Command, caller: string) => {
-	const name = getCommandNameRecursive(command);
-
-	const msg = `Unknown command: ${name} ${caller}.\nType '${name} --help' to get the help on command.`;
-
-	return new Error(msg);
-};
-
-const missingRequired = (command: RawCommand<any, any, any>, missingOpts: [string[], ...string[][]]) => {
-	const msg = `Command '${command.name}' is missing following required options: ${
-		missingOpts.map((opt) => {
-			const name = opt.shift()!;
-			const aliases = opt;
-
-			if (aliases.length) return `${name} [${aliases.join(', ')}]`;
-
-			return name;
-		}).join(', ')
-	}`;
-
-	return new Error(msg);
-};
-
-const unrecognizedOptions = (command: RawCommand<any, any, any>, unrecognizedArgs: [string, ...string[]]) => {
-	const msg = `Unrecognized options for command '${command.name}': ${unrecognizedArgs.join(', ')}`;
-
-	return new Error(msg);
-};
-
-const invalidBooleanSyntax = (matchedName: string) => {
-	return new Error(
-		`Invalid syntax: boolean type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value> | ${matchedName}.\nAllowed values: true, false, 0, 1`,
-	);
-};
-
-const invalidStringSyntax = (matchedName: string) => {
-	return new Error(
-		`Invalid syntax: string type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`,
-	);
-};
-
-const enumViolation = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
-	return new Error(
-		`Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
-			values.join(', ')
-		}; Received: ${data}`,
-	);
-};
-
-const enumViolationPos = (matchedName: string, data: string | undefined, values: [string, ...string[]]) => {
-	return new Error(
-		`Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
-			values.join(', ')
-		}; Received: ${data}`,
-	);
-};
-
-const invalidNumberSyntax = (matchedName: string) => {
-	return new Error(
-		`Invalid syntax: number type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`,
-	);
-};
-
-const invalidNumberValue = (matchedName: string, data: string | undefined) => {
-	return new Error(
-		`Invalid value: number type argument '${matchedName}' expects a number as an input, got: ${data}`,
-	);
-};
-
-const invalidInteger = (matchedName: string, data: string | undefined) => {
-	return new Error(
-		`Invalid value: number type argument '${matchedName}' expects an integer as an input, got: ${data}`,
-	);
-};
-
-const belowMin = (matchedName: string, data: string | undefined, min: number) => {
-	return new Error(
-		`Invalid value: number type argument '${matchedName}' expects minimal value of ${min} as an input, got: ${data}`,
-	);
-};
-
-const aboveMax = (matchedName: string, data: string | undefined, max: number) => {
-	return new Error(
-		`Invalid value: number type argument '${matchedName}' expects maximal value of ${max} as an input, got: ${data}`,
-	);
-};
-
-// Main area
 const generatePrefix = (name: string) => name.startsWith('-') ? name : name.length > 1 ? `--${name}` : `-${name}`;
 
 const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInternals>>(
@@ -410,7 +315,13 @@ const getCommandInner = (commands: Command[], candidates: CommandCandidate[], ar
 
 	const subcommand = getCommandInner(command.subcommands!, newCandidates, newArgs);
 
-	if (!subcommand.command) throw unknownSubcommand(command, candidates[0]!.data);
+	if (!subcommand.command) {
+		throw new BroCliError(undefined, {
+			type: 'unknownSubcommandEvent',
+			command,
+			offender: candidates[0]!.data,
+		});
+	}
 
 	return subcommand;
 };
@@ -457,7 +368,12 @@ const getCommand = (commands: Command[], args: string[]) => {
 
 	const { command, args: argsRes } = getCommandInner(commands, candidates, args);
 
-	if (!command) throw unknownCommand(firstCandidate.data);
+	if (!command) {
+		throw new BroCliError(undefined, {
+			type: 'unknownCommandEvent',
+			offender: firstCandidate.data,
+		});
+	}
 
 	return {
 		command,
@@ -466,6 +382,7 @@ const getCommand = (commands: Command[], args: string[]) => {
 };
 
 const parseArg = (
+	command: Command,
 	options: [string, ProcessedBuilderConfig][],
 	positionals: [string, ProcessedBuilderConfig][],
 	arg: string,
@@ -476,7 +393,7 @@ const parseArg = (
 	const argSplit = arg.split('=');
 	const hasEq = arg.includes('=');
 
-	const namePart = argSplit.shift();
+	const namePart = argSplit.shift()!;
 	const dataPart = hasEq ? argSplit.join('=') : nextArg;
 	let skipNext = !hasEq;
 
@@ -498,7 +415,16 @@ const parseArg = (
 		const pos = positionals.shift()!;
 
 		if (pos[1].enumVals && !pos[1].enumVals.find((val) => val === dataPart)) {
-			throw enumViolationPos(pos[1].name!, arg, pos[1].enumVals);
+			throw new BroCliError(undefined, {
+				type: 'validationError',
+				violation: 'Enum violation',
+				command,
+				option: pos[1],
+				offender: {
+					namePart,
+					dataPart,
+				},
+			});
 		}
 
 		data = arg;
@@ -542,17 +468,46 @@ const parseArg = (
 				return true;
 			}
 
-			throw invalidBooleanSyntax(match);
+			throw new BroCliError(undefined, {
+				type: 'validationError',
+				violation: 'Invalid boolean syntax',
+				option: opt,
+				command,
+				offender: {
+					namePart,
+					dataPart,
+				},
+			});
 		} else {
 			const match = names.find((name) => name === namePart);
 
 			if (!match) return false;
 
 			if (opt.type === 'string') {
-				if (!hasEq && nextArg === undefined) throw invalidStringSyntax(match);
+				if (!hasEq && nextArg === undefined) {
+					throw new BroCliError(undefined, {
+						type: 'validationError',
+						violation: 'Invalid string syntax',
+						option: opt,
+						command,
+						offender: {
+							namePart,
+							dataPart,
+						},
+					});
+				}
 
 				if (opt.enumVals && !opt.enumVals.find((val) => val === dataPart)) {
-					throw enumViolation(match, dataPart, opt.enumVals);
+					throw new BroCliError(undefined, {
+						type: 'validationError',
+						violation: 'Enum violation',
+						option: opt,
+						command,
+						offender: {
+							namePart,
+							dataPart,
+						},
+					});
 				}
 
 				data = dataPart;
@@ -560,17 +515,72 @@ const parseArg = (
 				return true;
 			}
 
-			if (!hasEq && nextArg === undefined) throw invalidNumberSyntax(match);
+			if (!hasEq && nextArg === undefined) {
+				throw new BroCliError(undefined, {
+					type: 'validationError',
+					violation: 'Invalid number syntax',
+					option: opt,
+					command,
+					offender: {
+						namePart,
+						dataPart,
+					},
+				});
+			}
 
 			const numData = Number(dataPart);
 
-			if (isNaN(numData)) throw invalidNumberValue(match, dataPart);
+			if (isNaN(numData)) {
+				throw new BroCliError(undefined, {
+					type: 'validationError',
+					violation: 'Invalid number syntax',
+					option: opt,
+					command,
+					offender: {
+						namePart,
+						dataPart,
+					},
+				});
+			}
 
-			if (opt.isInt && !isInt(numData)) throw invalidInteger(match, dataPart);
+			if (opt.isInt && !isInt(numData)) {
+				throw new BroCliError(undefined, {
+					type: 'validationError',
+					violation: 'Expected int',
+					option: opt,
+					command,
+					offender: {
+						namePart,
+						dataPart,
+					},
+				});
+			}
 
-			if (opt.minVal !== undefined && numData < opt.minVal) throw belowMin(match, dataPart, opt.minVal);
+			if (opt.minVal !== undefined && numData < opt.minVal) {
+				throw new BroCliError(undefined, {
+					type: 'validationError',
+					violation: 'Below min',
+					option: opt,
+					command,
+					offender: {
+						namePart,
+						dataPart,
+					},
+				});
+			}
 
-			if (opt.maxVal !== undefined && numData > opt.maxVal) throw aboveMax(match, dataPart, opt.maxVal);
+			if (opt.maxVal !== undefined && numData > opt.maxVal) {
+				throw new BroCliError(undefined, {
+					type: 'validationError',
+					violation: 'Above max',
+					option: opt,
+					command,
+					offender: {
+						namePart,
+						dataPart,
+					},
+				});
+			}
 
 			data = dataPart;
 
@@ -616,7 +626,7 @@ const parseOptions = (
 			skipNext,
 			isHelp,
 			isVersion,
-		} = parseArg(nonPositionalEntries, positionalEntries, arg, nextArg);
+		} = parseArg(command, nonPositionalEntries, positionalEntries, arg, nextArg);
 		if (!option) unrecognizedArgsArr.push(arg.split('=')[0]!);
 		if (skipNext) ++i;
 
@@ -638,8 +648,20 @@ const parseOptions = (
 		if (option.isRequired && result[optKey] === undefined) missingRequiredArr.push([option.name!, ...option.aliases]);
 	}
 
-	if (missingRequiredArr.length) throw missingRequired(command, missingRequiredArr as [string[], ...string[][]]);
-	if (unrecognizedArgsArr.length) throw unrecognizedOptions(command, unrecognizedArgsArr as [string, ...string[]]);
+	if (missingRequiredArr.length) {
+		throw new BroCliError(undefined, {
+			type: 'missingArgsErr',
+			command,
+			missing: missingRequiredArr as [string[], ...string[][]],
+		});
+	}
+	if (unrecognizedArgsArr.length) {
+		throw new BroCliError(undefined, {
+			type: 'unrecognizedArgsErr',
+			command,
+			unrecognized: unrecognizedArgsArr as [string, ...string[]],
+		});
+	}
 
 	return Object.keys(result).length ? result : undefined;
 };
@@ -705,144 +727,135 @@ const help = async (command: Command | string | undefined, commands: Command[], 
 			: await helpHandler({
 				type: 'commandHelp',
 				command,
-				args: [],
 			})
 		: await helpHandler({
 			type: 'globalHelp',
 			commands: commands,
-			args: [],
 		});
-
-/**
- * Separated for testing purposes
- */
-export const rawCli = async (commands: Command[], config?: BroCliConfig) => {
-	const processedCmds = validateCommands(commands);
-
-	const argSource = config?.argSource ?? process.argv;
-	const version = config?.version;
-	const help = config?.help;
-	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
-	const eventHandler = config?.eventHandler ? eventHandlerWrapper(config.eventHandler) : defaultEventHandler;
-
-	let args = argSource.slice(2, argSource.length);
-	if (!args.length) {
-		return await eventHandler({
-			type: 'globalHelp',
-			commands: processedCmds,
-			help,
-			args,
-		});
-	}
-
-	const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
-	if (
-		helpIndex !== -1 && (helpIndex > 0
-			? args[helpIndex - 1]?.startsWith('-') && !args[helpIndex - 1]!.includes('=') ? false : true
-			: true)
-	) {
-		const command = getCommand(processedCmds, args).command;
-
-		if (typeof command === 'object') {
-			return await eventHandler({
-				type: 'commandHelp',
-				command,
-				args,
-			});
-		} else {
-			return await eventHandler({
-				type: 'globalHelp',
-				commands: processedCmds,
-				help,
-				args,
-			});
-		}
-	}
-
-	const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
-	if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
-		return await eventHandler({
-			type: 'version',
-			version,
-		});
-	}
-
-	const { command, args: newArgs } = getCommand(processedCmds, args);
-	if (!command) {
-		return await eventHandler({
-			type: 'globalHelp',
-			commands: processedCmds,
-			help,
-			args,
-		});
-	}
-
-	if (command === 'help') {
-		let helpCommand: Command | 'help' | undefined;
-		let newestArgs: string[] = newArgs;
-
-		do {
-			const res = getCommand(processedCmds, newestArgs);
-			helpCommand = res.command;
-			newestArgs = res.args;
-		} while (helpCommand === 'help');
-
-		return helpCommand
-			? await eventHandler({
-				type: 'commandHelp',
-				command: helpCommand,
-				args,
-			})
-			: await eventHandler({
-				type: 'globalHelp',
-				commands: processedCmds,
-				help,
-				args,
-			});
-	}
-
-	const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
-
-	if (optionResult === 'help') {
-		return await eventHandler({
-			type: 'commandHelp',
-			command,
-			args,
-		});
-	}
-	if (optionResult === 'version') {
-		return await eventHandler({
-			type: 'version',
-			version,
-		});
-	}
-
-	if (command.handler) {
-		if (config?.hook) await config.hook('before', command);
-		await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
-		if (config?.hook) await config.hook('after', command);
-		return undefined;
-	} else {
-		return await eventHandler({
-			type: 'commandHelp',
-			command,
-			args,
-		});
-	}
-};
 
 /**
  * Runs CLI commands
  *
  * @param commands - command collection
  *
- * @param argSource - source of cli arguments, optionally passed as a parameter for testing purposes and compatibility with custom environments
+ * @param config - additional settings
  */
 export const run = async (commands: Command[], config?: BroCliConfig) => {
+	const eventHandler = config?.eventHandler ? eventHandlerWrapper(config.eventHandler) : defaultEventHandler;
+	const argSource = config?.argSource ?? process.argv;
+	const version = config?.version;
+	const help = config?.help;
+	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
+
 	try {
-		await rawCli(commands, config);
+		const processedCmds = validateCommands(commands);
+
+		let args = argSource.slice(2, argSource.length);
+		if (!args.length) {
+			return await eventHandler({
+				type: 'globalHelp',
+				commands: processedCmds,
+				help,
+			});
+		}
+
+		const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
+		if (
+			helpIndex !== -1 && (helpIndex > 0
+				? args[helpIndex - 1]?.startsWith('-') && !args[helpIndex - 1]!.includes('=') ? false : true
+				: true)
+		) {
+			const command = getCommand(processedCmds, args).command;
+
+			if (typeof command === 'object') {
+				return await eventHandler({
+					type: 'commandHelp',
+					command,
+				});
+			} else {
+				return await eventHandler({
+					type: 'globalHelp',
+					commands: processedCmds,
+					help,
+				});
+			}
+		}
+
+		const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
+		if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
+			return await eventHandler({
+				type: 'version',
+				version,
+			});
+		}
+
+		const { command, args: newArgs } = getCommand(processedCmds, args);
+		if (!command) {
+			return await eventHandler({
+				type: 'globalHelp',
+				commands: processedCmds,
+				help,
+			});
+		}
+
+		if (command === 'help') {
+			let helpCommand: Command | 'help' | undefined;
+			let newestArgs: string[] = newArgs;
+
+			do {
+				const res = getCommand(processedCmds, newestArgs);
+				helpCommand = res.command;
+				newestArgs = res.args;
+			} while (helpCommand === 'help');
+
+			return helpCommand
+				? await eventHandler({
+					type: 'commandHelp',
+					command: helpCommand,
+				})
+				: await eventHandler({
+					type: 'globalHelp',
+					commands: processedCmds,
+					help,
+				});
+		}
+
+		const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
+
+		if (optionResult === 'help') {
+			return await eventHandler({
+				type: 'commandHelp',
+				command,
+			});
+		}
+		if (optionResult === 'version') {
+			return await eventHandler({
+				type: 'version',
+				version,
+			});
+		}
+
+		if (command.handler) {
+			if (config?.hook) await config.hook('before', command);
+			await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
+			if (config?.hook) await config.hook('after', command);
+			return undefined;
+		} else {
+			return await eventHandler({
+				type: 'commandHelp',
+				command,
+			});
+		}
 	} catch (e) {
-		console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
+		if (e instanceof BroCliError) {
+			if (e.event) await eventHandler(e.event);
+			else console.error(e.message);
+		} else {
+			await eventHandler({
+				type: 'unknownError',
+				error: e,
+			});
+		}
 
 		process.exit(1);
 	}
