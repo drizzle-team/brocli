@@ -56,7 +56,8 @@ export type ValidationViolation =
 	| 'Expected int'
 	| 'Invalid boolean syntax'
 	| 'Invalid string syntax'
-	| 'Invalid number syntax';
+	| 'Invalid number syntax'
+	| 'Enum violation';
 
 export type ValidationErrorEvent = {
 	type: 'validationError';
@@ -159,6 +160,72 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		}
 
 		case 'validationError': {
+			let msg: string;
+
+			const matchedName = event.offender.namePart;
+			const data = event.offender.dataPart;
+			const option = event.option._.config;
+
+			switch (event.violation) {
+				case 'Above max': {
+					const max = option.maxVal!;
+					msg =
+						`Invalid value: number type argument '${matchedName}' expects maximal value of ${max} as an input, got: ${data}`;
+
+					break;
+				}
+
+				case 'Below min': {
+					const min = option.minVal;
+
+					msg =
+						`Invalid value: number type argument '${matchedName}' expects minimal value of ${min} as an input, got: ${data}`;
+
+					break;
+				}
+
+				case 'Expected int': {
+					msg = `Invalid value: number type argument '${matchedName}' expects an integer as an input, got: ${data}`;
+
+					break;
+				}
+
+				case 'Invalid boolean syntax': {
+					msg =
+						`Invalid syntax: boolean type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value> | ${matchedName}.\nAllowed values: true, false, 0, 1`;
+
+					break;
+				}
+
+				case 'Invalid string syntax': {
+					msg =
+						`Invalid syntax: string type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`;
+
+					break;
+				}
+
+				case 'Invalid number syntax': {
+					msg =
+						`Invalid syntax: number type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`;
+
+					break;
+				}
+
+				case 'Enum violation': {
+					const values = option.enumVals!;
+
+					msg = option.type === 'positional'
+						? `Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
+							values.join(', ')
+						}; Received: ${data}`
+						: `Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
+							values.join(', ')
+						}; Received: ${data}`;
+				}
+			}
+
+			console.error(msg);
+
 			return true;
 		}
 
