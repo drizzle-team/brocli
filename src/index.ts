@@ -16,6 +16,7 @@ export type {
 export { command, commandsInfo, handler, run, test } from './command-core';
 export type {
 	BroCliEvent,
+	BroCliEventType,
 	CommandHelpEvent,
 	EventHandler,
 	GlobalHelpEvent,

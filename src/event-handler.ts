@@ -46,6 +46,11 @@ export type VersionEvent = {
 	version?: string | Function;
 };
 
+export type CommandsCompositionErrorEvent = {
+	type: 'commandsCompositionErrEvent';
+	message: string;
+};
+
 export type ValidationViolation =
 	| 'Above max'
 	| 'Below min'
@@ -76,7 +81,10 @@ export type BroCliEvent =
 	| UnknownSubcommandEvent
 	| ValidationErrorEvent
 	| VersionEvent
-	| UnknownErrorEvent;
+	| UnknownErrorEvent
+	| CommandsCompositionErrorEvent;
+
+export type BroCliEventType = BroCliEvent['type'];
 
 const executeOrLog = async (target?: string | Function) =>
 	typeof target === 'string' ? console.log(target) : target ? await target() : undefined;
@@ -119,7 +127,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const msg = `Unknown command: '${event.offender}'.\nType '--help' to get help on the cli.`;
 
 			console.error(msg);
-			return true;
+
+			process.exit(1);
 		}
 
 		case 'unknownSubcommandEvent': {
@@ -127,7 +136,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const msg = `Unknown command: ${cName} ${event.offender}.\nType '${cName} --help' to get the help on command.`;
 
 			console.error(msg);
-			return true;
+
+			process.exit(1);
 		}
 
 		case 'missingArgsErr': {
@@ -145,7 +155,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			}`;
 
 			console.error(msg);
-			return true;
+
+			process.exit(1);
 		}
 
 		case 'unrecognizedArgsErr': {
@@ -153,7 +164,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const msg = `Unrecognized options for command '${command.name}': ${unrecognized.join(', ')}`;
 
 			console.error(msg);
-			return true;
+
+			process.exit(1);
 		}
 
 		case 'validationError': {
@@ -228,13 +240,20 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			return true;
+			process.exit(1);
 		}
 
 		case 'unknownError': {
 			const e = event.error;
 			console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
-			return true;
+
+			process.exit(1);
+		}
+
+		case 'commandsCompositionErrEvent': {
+			console.error(event.message);
+
+			process.exit(1);
 		}
 	}
 

@@ -1,4 +1,4 @@
-import { rawCli as runCli } from '@/command-core';
+import { run as runCli } from '@/command-core';
 import { boolean, type Command, command, handler, string, type TypeOf } from '@/index';
 import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
 

@@ -1,5 +1,4 @@
 import clone from 'clone';
-import { parse as parseQuotes } from 'shell-quote';
 import { BroCliError } from './brocli-error';
 import { defaultEventHandler, type EventHandler, eventHandlerWrapper } from './event-handler';
 import {
@@ -10,7 +9,7 @@ import {
 	type ProcessedOptions,
 	type TypeOf,
 } from './option-builder';
-import { isInt } from './util';
+import { isInt, shellArgs } from './util';
 
 // Type area
 export type CommandHandler<
@@ -849,7 +848,12 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 	} catch (e) {
 		if (e instanceof BroCliError) {
 			if (e.event) await eventHandler(e.event);
-			else console.error(e.message);
+			else {
+				await eventHandler({
+					type: 'commandsCompositionErrEvent',
+					message: e.message,
+				});
+			}
 		} else {
 			await eventHandler({
 				type: 'unknownError',
@@ -857,7 +861,7 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			});
 		}
 
-		process.exit(1);
+		return;
 	}
 };
 
@@ -865,12 +869,6 @@ export const handler = <TOpts extends Record<string, GenericBuilderInternals>>(
 	options: TOpts,
 	handler: CommandHandler<TOpts>,
 ) => handler;
-
-const shellArgs = (str: string) => {
-	const spaces: string[] = str.match(/"[^"]+"|'[^']+'|\S+/g) ?? [];
-
-	return spaces.flatMap((s) => parseQuotes(s)).map((s) => s.toString());
-};
 
 export const test = async <TOpts, THandlerInput>(
 	command: Command<TOpts, THandlerInput>,
