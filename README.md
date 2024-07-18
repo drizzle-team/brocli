@@ -201,7 +201,7 @@ const commands: Command[] = []
 commands.push(command({
     name: 'command', 
     aliases: ['c', 'cmd'],
-    description: 'Description goes here',
+    desc: 'Description goes here',
     hidden: false,
     options: commandOptions,
     transform: (options) => {
@@ -228,7 +228,9 @@ Parameters:
 -   `aliases` - aliases by which command is searched in cli args  
     :warning: - must not start with `-` character, be equal to [`true`, `false`, `0`, `1`] (case-insensitive) and be unique per command collection  
 
--   `description` - description for command to be displayed in `help` command  
+-   `desc` - description for command to be displayed in `help` command  
+
+-   `shortDesc` - short description for command to be displayed in `help` command  
 
 -   `hidden` - sets command as hidden - if `true`, command will be omitted from being displayed in `help` command  
 
@@ -243,6 +245,8 @@ Parameters:
 
 -   `subcommands` - subcommands for command    
     :warning: - command can't have subcommands and `positional` options at the same time  
+
+-   `metadata` - any data that you want to attach to command to later use in docs generation step  
 
 ### Running commands
 
@@ -266,7 +270,7 @@ const commands: Command[] = []
 commands.push(command({
     name: 'command', 
     aliases: ['c', 'cmd'],
-    description: 'Description goes here',
+    desc: 'Description goes here',
     hidden: false,
     options: commandOptions,
     handler: commandHandler,

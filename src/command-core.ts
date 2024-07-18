@@ -23,10 +23,11 @@ export type CommandHandler<
 export type CommandInfo = {
 	name: string;
 	aliases?: [string, ...string[]];
-	description?: string;
+	desc?: string;
+	shortDesc?: string;
 	hidden?: boolean;
 	options?: Record<string, ProcessedBuilderConfig>;
-	metaData?: any;
+	metadata?: any;
 	subcommands?: CommandsInfo;
 };
 
@@ -55,15 +56,15 @@ export type RawCommand<
 > = {
 	name?: string;
 	aliases?: [string, ...string[]];
-	description?: string;
-	shortDescription?: string;
+	desc?: string;
+	shortDesc?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
 	transform?: (options: TOptsData) => TTransformed;
 	handler?: (options: Awaited<TTransformed>) => any;
 	subcommands?: [Command, ...Command[]];
-	metaData?: any;
+	metadata?: any;
 };
 
 export type AnyRawCommand<
@@ -73,22 +74,22 @@ export type AnyRawCommand<
 > = {
 	name?: string;
 	aliases?: [string, ...string[]];
-	description?: string;
-	shortDescription?: string;
+	desc?: string;
+	shortDesc?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
 	transform?: GenericCommandHandler;
 	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
-	metaData?: any;
+	metadata?: any;
 };
 
 export type Command<TOptsType = any, TTransformedType = any> = {
 	name: string;
 	aliases?: [string, ...string[]];
-	description?: string;
-	shortDescription?: string;
+	desc?: string;
+	shortDesc?: string;
 	hidden?: boolean;
 	options?: ProcessedOptions;
 	help?: string | Function;
@@ -96,7 +97,7 @@ export type Command<TOptsType = any, TTransformedType = any> = {
 	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 	parent?: Command;
-	metaData?: any;
+	metadata?: any;
 };
 
 export type CommandCandidate = {
@@ -904,13 +905,13 @@ export const commandsInfo = (
 	return Object.fromEntries(validated.map((c) => [c.name, {
 		name: c.name,
 		aliases: clone(c.aliases),
-		description: c.description,
-		shortDescription: c.shortDescription,
+		desc: c.desc,
+		shortDesc: c.shortDesc,
 		isHidden: c.hidden,
 		options: c.options
 			? Object.fromEntries(Object.entries(c.options).map(([key, opt]) => [key, clone(opt.config)]))
 			: undefined,
-		metaData: clone(c.metaData),
+		metadata: clone(c.metadata),
 		subcommands: c.subcommands ? commandsInfo(c.subcommands) : undefined,
 	}]));
 };
