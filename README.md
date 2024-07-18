@@ -1,29 +1,56 @@
-# BroCLI
+# Brocli 🥦
+Modern type-safe way of building CLIs  
+by [Drizzle Team](https://drizzle.team)
 
-Run CLI commands with fully typed handlers
+```ts
+import { command, string, boolean, run } from "@drizzle-team/brocli";
 
-## Code
+const push = command({
+  name: "push",
+  options: {
+    dialect: string().enum("postgresql", "mysql", "sqlite"),
+    databaseSchema: string().required(),
+    databaseUrl: string().required(),
+    strict: boolean().default(false),
+  },
+  handler: (opts) => {
+    ...
+  },
+});
 
-### Defining options
-
-Start defining options using `string`, `number`, `boolean` and `positional`functions:  
-
-```Typescript
-import { string, boolean, number, positional } from '@drizzle-team/brocli'
-
-const commandOptions = {
-    opt1: string(),
-    opt2: boolean('flag').alias('f'),
-    opt3: number().int(),
-    opt4: positional().enum('one', 'two')
-    // And so on... 
-}
+run([push]); // parse shell arguments and run command
 ```
+ 
+### Why?
+Brocli is meant to solve a list of challenges we've face while building 
+[Drizzle ORM](https://orm.drizzle.team) CLI companion for generating and running SQL schema migrations:
+- [x] Explicit, straightforward and discoverable API
+- [x] Typed options(arguments) with built in validation
+- [x] Ability to reuse options(or option sets) across commands
+- [x] Transformer hook to decouple runtime config consumption from command business logic
+- [x] `--version`, `-v` as either string or callback
+- [x] Command hooks to run common stuff before/after command
+- [x] Explicit global params passthrough
+- [x] Testability, the most important part for us to iterate without breaking
+- [x] Themes, simple API to style global/command helps
+- [x] Docs generation API to eliminate docs drifting
 
-Keys of the object passed to the object storing options determine to which keys parsed options will be assigned to inside your handler.  
+```ts
+import { command } from "@drizzle-team/brocli";
 
-#### Option builder
+const cmd = command({
+  name: "cmd",
+  options: {
+    dialect: string().enum("postgresql", "mysql", "sqlite"),
+    schema: string().required(),
+    url: string().required(),
+  },
+  handler: (opts) => {
+    ...
+  },
+});
 
+```
 Initial builder functions:
 
 -   `string(name?: string)` - defines option as a string-type option which requires data to be passed as `--option=value` or `--option value`    
