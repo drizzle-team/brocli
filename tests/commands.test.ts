@@ -39,7 +39,7 @@ const generateHandler = async (options: TypeOf<typeof generateOps>) => {
 commands.push(command({
 	name: 'generate',
 	aliases: ['g', 'gen'],
-	description: 'Generate drizzle migrations',
+	desc: 'Generate drizzle migrations',
 	hidden: false,
 	options: generateOps,
 	handler: generateHandler,
