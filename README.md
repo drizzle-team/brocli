@@ -1,6 +1,6 @@
 # Brocli 🥦
 Modern type-safe way of building CLIs  
-by [Drizzle Team](https://drizzle.team)
+by [Drizzle Team](https://drizzle.team)  
 
 ```ts
 import { command, string, boolean, run } from "@drizzle-team/brocli";
@@ -22,7 +22,7 @@ run([push]); // parse shell arguments and run command
 ```
  
 ### Why?
-Brocli is meant to solve a list of challenges we've face while building 
+Brocli is meant to solve a list of challenges we've faced while building 
 [Drizzle ORM](https://orm.drizzle.team) CLI companion for generating and running SQL schema migrations:
 - [x] Explicit, straightforward and discoverable API
 - [x] Typed options(arguments) with built in validation
@@ -36,7 +36,7 @@ Brocli is meant to solve a list of challenges we've face while building
 - [x] Docs generation API to eliminate docs drifting
 
 ### API
-Brocli `command` declaration has:  
+Brocli **`command`** declaration has:  
 `name` - command name, will be listed in `help`  
 `desc` - optional description, will be listed in the command `help`  
 `shortDesc` - optional short description, will be listed in the all commands/all subcommands `help`   
