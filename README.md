@@ -241,7 +241,8 @@ Parameters:
 
 -   `handler` - function, which will be executed in case of successful option parse  
 
--   `help` - function or string, which will be executed or printed when help is called for this command
+-   `help` - function or string, which will be executed or printed when help is called for this command  
+    :warning: - must be present if your command doesn't have subcommands, otherwise defaults to help for command  
 
 -   `subcommands` - subcommands for command    
     :warning: - command can't have subcommands and `positional` options at the same time  
