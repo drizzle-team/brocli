@@ -35,23 +35,26 @@ Brocli is meant to solve a list of challenges we've face while building
 - [x] Themes, simple API to style global/command helps
 - [x] Docs generation API to eliminate docs drifting
 
-### `command`
-Brocli command consists of:  
-`name` - name of the command for help  
-`desc` - optional description to be listed in the command `help`  
-`shortDesc` - optional short description to be listed in the all commands/all subcommands help list  
+### API
+Brocli `command` declaration has:  
+`name` - command name, will be listed in `help`  
+`desc` - optional description, will be listed in the command `help`  
+`shortDesc` - optional short description, will be listed in the all commands/all subcommands `help`   
 `aliases` - command name aliases  
-`hidden` - hide from help  
-`help` - declare command help text or a callback to print dynamically provided config  
-`options` - declare a typed list of shell arguments to parse  
-`transform` - optional hook, will be called before handler to modify CLI params(see examples below)  
+`hidden` - flag to hide command from `help`  
+`help` - command help text or a callback to print help text with dynamically provided config  
+`options` - typed list of shell arguments to be parsed and provided to `transform` or `handler`    
+`transform` - optional hook, will be called before handler to modify CLI params  
 `handler` - called with either typed `options` or `transform` params, place to run your command business logic  
+`metadata` - optional meta information for docs generation flow
 
+`name`, `desc`, `shortDesc` and `metadata` are provided to docs generation step  
+  
   
 ```ts
+import { command, string, boolean } from "@drizzle-team/brocli";
 
-`name`, `desc`, `shortDesc` are provided to docs generation step
-import { command, string, boolean, run } from "@drizzle-team/brocli";
+
 
 const push = command({
   name: "push",
