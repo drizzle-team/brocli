@@ -26,7 +26,7 @@ export type CommandInfo = {
 	description?: string;
 	hidden?: boolean;
 	options?: Record<string, ProcessedBuilderConfig>;
-	metaInfo?: string;
+	metaData?: any;
 	subcommands?: CommandsInfo;
 };
 
@@ -56,14 +56,14 @@ export type RawCommand<
 	name?: string;
 	aliases?: [string, ...string[]];
 	description?: string;
-	longDescription?: string;
+	shortDescription?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
 	transform?: (options: TOptsData) => TTransformed;
 	handler?: (options: Awaited<TTransformed>) => any;
 	subcommands?: [Command, ...Command[]];
-	metaInfo?: string;
+	metaData?: any;
 };
 
 export type AnyRawCommand<
@@ -74,21 +74,21 @@ export type AnyRawCommand<
 	name?: string;
 	aliases?: [string, ...string[]];
 	description?: string;
-	longDescription?: string;
+	shortDescription?: string;
 	hidden?: boolean;
 	options?: TOpts;
 	help?: string | Function;
 	transform?: GenericCommandHandler;
 	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
-	metaInfo?: string;
+	metaData?: any;
 };
 
 export type Command<TOptsType = any, TTransformedType = any> = {
 	name: string;
 	aliases?: [string, ...string[]];
 	description?: string;
-	longDescription?: string;
+	shortDescription?: string;
 	hidden?: boolean;
 	options?: ProcessedOptions;
 	help?: string | Function;
@@ -96,7 +96,7 @@ export type Command<TOptsType = any, TTransformedType = any> = {
 	handler?: GenericCommandHandler;
 	subcommands?: [Command, ...Command[]];
 	parent?: Command;
-	metaInfo?: string;
+	metaData?: any;
 };
 
 export type CommandCandidate = {
@@ -903,13 +903,14 @@ export const commandsInfo = (
 
 	return Object.fromEntries(validated.map((c) => [c.name, {
 		name: c.name,
-		aliases: c.aliases,
+		aliases: clone(c.aliases),
 		description: c.description,
+		shortDescription: c.shortDescription,
 		isHidden: c.hidden,
 		options: c.options
-			? Object.fromEntries(Object.entries(c.options).map(([key, opt]) => [key, opt.config]))
+			? Object.fromEntries(Object.entries(c.options).map(([key, opt]) => [key, clone(opt.config)]))
 			: undefined,
-		metaInfo: c.metaInfo,
+		metaData: clone(c.metaData),
 		subcommands: c.subcommands ? commandsInfo(c.subcommands) : undefined,
 	}]));
 };
