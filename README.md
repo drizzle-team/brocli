@@ -35,6 +35,42 @@ Brocli is meant to solve a list of challenges we've face while building
 - [x] Themes, simple API to style global/command helps
 - [x] Docs generation API to eliminate docs drifting
 
+### `command`
+Brocli command consists of:  
+`name` - name of the command for help  
+`desc` - optional description to be listed in the command `help`  
+`shortDesc` - optional short description to be listed in the all commands/all subcommands help list  
+`aliases` - command name aliases  
+`hidden` - hide from help  
+`help` - declare command help text or a callback to print dynamically provided config  
+`options` - declare a typed list of shell arguments to parse  
+`transform` - optional hook, will be called before handler to modify CLI params(see examples below)  
+`handler` - called with either typed `options` or `transform` params, place to run your command business logic  
+
+  
+```ts
+
+`name`, `desc`, `shortDesc` are provided to docs generation step
+import { command, string, boolean, run } from "@drizzle-team/brocli";
+
+const push = command({
+  name: "push",
+  options: {
+    dialect: string().enum("postgresql", "mysql", "sqlite"),
+    databaseSchema: string().required(),
+    databaseUrl: string().required(),
+    strict: boolean().default(false),
+  },
+  transform: (opts) => {
+  },
+  handler: (opts) => {
+    ...
+  },
+});
+```
+
+
+
 ```ts
 import { command } from "@drizzle-team/brocli";
 
