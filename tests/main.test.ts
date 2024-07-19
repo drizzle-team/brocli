@@ -1,16 +1,55 @@
-import { run as runCli } from '@/command-core';
-import { boolean, type Command, command, handler, string, type TypeOf } from '@/index';
-import { beforeEach, describe, expect, expectTypeOf } from 'vitest';
+import {
+	boolean,
+	type BroCliEventType,
+	type Command,
+	command,
+	type EventHandler,
+	EventType,
+	handler,
+	number,
+	positional,
+	run,
+	string,
+	type TypeOf,
+} from '@/index';
+import { shellArgs } from '@/util';
+import { describe, expect, expectTypeOf, Mock, vi } from 'vitest';
 
-const getArgs = (...args: string[]) => [
-	process.argv[0]!, // executing application path
-	process.argv[1]!, // executed file path
-	...args,
-];
+const getArgs = (str: string) => [process.argv[0]!, process.argv[1]!, ...shellArgs(str)];
 
-const storage = {
-	options: {} as Record<string, any>,
-	command: undefined as string | undefined,
+const eventMocks: Record<BroCliEventType, Mock<any, any>> = {
+	commandHelp: vi.fn(),
+	commandsCompositionErrEvent: vi.fn(),
+	globalHelp: vi.fn(),
+	missingArgsErr: vi.fn(),
+	unknownCommandEvent: vi.fn(),
+	unknownError: vi.fn(),
+	unknownSubcommandEvent: vi.fn(),
+	unrecognizedArgsErr: vi.fn(),
+	validationError: vi.fn(),
+	version: vi.fn(),
+};
+
+const hookMocks: Record<EventType, Mock<any, any>> = {
+	before: vi.fn(),
+	after: vi.fn(),
+};
+
+const hook = async (event: EventType, command: Command) => {
+	if (event === 'before') await hookMocks.before(command);
+	if (event === 'after') await hookMocks.after(command);
+};
+
+const testEventHandler: EventHandler = (event) => {
+	eventMocks[event.type](event);
+
+	return true;
+};
+
+const handlers = {
+	generate: vi.fn(),
+	cFirst: vi.fn(),
+	cSecond: vi.fn(),
 };
 
 const commands: Command[] = [];
@@ -31,18 +70,13 @@ const generateOps = {
 	debug: boolean('dbg').alias('g').hidden(),
 };
 
-const generateHandler = async (options: TypeOf<typeof generateOps>) => {
-	storage.options = options;
-	storage.command = 'generate';
-};
-
 commands.push(command({
 	name: 'generate',
 	aliases: ['g', 'gen'],
 	desc: 'Generate drizzle migrations',
 	hidden: false,
 	options: generateOps,
-	handler: generateHandler,
+	handler: handlers.generate,
 }));
 
 const cFirstOps = {
@@ -55,10 +89,7 @@ const cFirstOps = {
 commands.push(command({
 	name: 'c-first',
 	options: cFirstOps,
-	handler: async (options) => {
-		storage.options = options;
-		storage.command = 'c-first';
-	},
+	handler: handlers.cFirst,
 	hidden: false,
 }));
 
@@ -72,129 +103,89 @@ const cSecondOps = {
 commands.push(command({
 	name: 'c-second',
 	options: cSecondOps,
-	handler: (options) => {
-		storage.options = options;
-		storage.command = 'c-second';
-	},
+	handler: handlers.cSecond,
 	hidden: false,
 }));
 
-beforeEach(() => {
-	storage.options = {};
-	storage.command = undefined;
-});
-
-describe('Option parsing tests', (it) => {
+describe('Parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		await runCli(commands, { argSource: getArgs('generate', '--dialect=pg') });
+		await run(commands, { argSource: getArgs('generate --dialect=pg') });
 
-		expect(storage).toStrictEqual({
-			command: 'generate',
-			options: {
-				dialect: 'pg',
-				schema: undefined,
-				out: undefined,
-				name: undefined,
-				breakpoints: undefined,
-				custom: undefined,
-				config: './drizzle-kit.config.ts',
-				flag: undefined,
-				defFlag: true,
-				defString: 'Defaultvalue',
-				debug: undefined,
-			},
-		});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: undefined,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+		}]);
 	});
 
 	it('All options by name', async () => {
-		await runCli(
+		await run(
 			commands,
 			{
 				argSource: getArgs(
-					'generate',
-					'--dialect',
-					'pg',
-					'--schema=./schemapath.ts',
-					'--out=./outfile.ts',
-					'--name=Example migration',
-					'--breakpoints=breakpoints',
-					'--custom=custom value',
-					'--flag',
-					'--defFlag',
-					'false',
-					'--dbg=true',
+					'generate --dialect pg --schema=./schemapath.ts --out=./outfile.ts --name="Example migration" --breakpoints=breakpoints --custom="custom value" --flag --defFlag false --dbg=true',
 				),
+				eventHandler: testEventHandler,
 			},
 		);
 
-		expect(storage).toStrictEqual({
-			command: 'generate',
-			options: {
-				dialect: 'pg',
-				schema: './schemapath.ts',
-				out: './outfile.ts',
-				name: 'Example migration',
-				breakpoints: 'breakpoints',
-				custom: 'custom value',
-				config: './drizzle-kit.config.ts',
-				flag: true,
-				defFlag: false,
-				defString: 'Defaultvalue',
-				debug: true,
-			},
-		});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: './schemapath.ts',
+			out: './outfile.ts',
+			name: 'Example migration',
+			breakpoints: 'breakpoints',
+			custom: 'custom value',
+			config: './drizzle-kit.config.ts',
+			flag: true,
+			defFlag: false,
+			defString: 'Defaultvalue',
+			debug: true,
+		}]);
 	});
 
 	it('All options by alias', async () => {
-		await runCli(
+		await run(
 			commands,
 			{
 				argSource: getArgs(
-					'generate',
-					'-dlc',
-					'pg',
-					'-s=./schemapath.ts',
-					'-o=./outfile.ts',
-					'-n=Example migration',
-					'--break=breakpoints',
-					'--cus=custom value',
-					'-f',
-					'-def',
-					'false',
-					'-ds=Not=Default=Value',
-					'-g=true',
+					'generate -dlc pg -s=./schemapath.ts -o=./outfile.ts -n="Example migration" --break=breakpoints --cus="custom value" -f -def false -ds=Not=Default=Value -g=true',
 				),
+				eventHandler: testEventHandler,
 			},
 		);
 
-		expect(storage).toStrictEqual({
-			command: 'generate',
-			options: {
-				dialect: 'pg',
-				schema: './schemapath.ts',
-				out: './outfile.ts',
-				name: 'Example migration',
-				breakpoints: 'breakpoints',
-				custom: 'custom value',
-				config: './drizzle-kit.config.ts',
-				flag: true,
-				defFlag: false,
-				defString: 'Not=Default=Value',
-				debug: true,
-			},
-		});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: './schemapath.ts',
+			out: './outfile.ts',
+			name: 'Example migration',
+			breakpoints: 'breakpoints',
+			custom: 'custom value',
+			config: './drizzle-kit.config.ts',
+			flag: true,
+			defFlag: false,
+			defString: 'Not=Default=Value',
+			debug: true,
+		}]);
 	});
 
 	it('Missing required options', async () => {
-		await expect(async () => await runCli(commands, { argSource: getArgs('generate') })).rejects.toThrowError(
+		await expect(async () => await run(commands, { argSource: getArgs('generate') })).rejects.toThrowError(
 			new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
 		);
 	});
 
 	it('Unrecognized options', async () => {
-		await expect(async () =>
-			await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '--unknown-one', '-m') })
-		)
+		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg --unknown-one -m') }))
 			.rejects
 			.toThrowError(
 				new Error(`Unrecognized options for command 'generate': --unknown-one`),
@@ -202,9 +193,7 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		await expect(async () =>
-			await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-def=somevalue') })
-		)
+		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg -def=somevalue') }))
 			.rejects
 			.toThrowError(
 				new Error(
@@ -214,92 +203,139 @@ describe('Option parsing tests', (it) => {
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		await expect(async () => await runCli(commands, { argSource: getArgs('generate', '--dialect=pg', '-ds') })).rejects
+		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg -ds') })).rejects
 			.toThrowError(
 				new Error(
 					`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
 				),
 			);
 	});
-});
 
-describe('Command parsing tests', (it) => {
+	it('Positional in order', async () => {});
+
+	it('Positional after flag', async () => {});
+
+	it('Positional after flag set by "="', async () => {});
+
+	it('Positional after valueless flag', async () => {});
+
+	it('Positional after string', async () => {});
+
+	it('Positional after string set by "="', async () => {});
+
+	it('Transform', async () => {});
+
+	it('Omit undefined keys', async () => {});
+
+	it('Global --help', async () => {});
+
+	it('Global -h', async () => {});
+
+	it('Command --help', async () => {});
+
+	it('Command -h', async () => {});
+
+	it('--version', async () => {});
+
+	it('-v', async () => {});
+
 	it('Get the right command, no args', async () => {
-		await runCli(commands, { argSource: getArgs('c-first') });
+		await run(commands, { argSource: getArgs('c-first'), eventHandler: testEventHandler });
 
-		expect(storage).toStrictEqual({
-			command: 'c-first',
-			options: {
-				flag: undefined,
-				string: undefined,
-				sFlag: undefined,
-				sString: undefined,
-			},
-		});
+		expect(handlers.cFirst.mock.lastCall).toStrictEqual([{
+			flag: undefined,
+			string: undefined,
+			sFlag: undefined,
+			sString: undefined,
+		}]);
 	});
 
 	it('Get the right command, command before args', async () => {
-		await runCli(commands, {
-			argSource: getArgs('c-second', '--flag', '--string=strval', '--stealth', '--sstring=Hidden string'),
+		await run(commands, {
+			argSource: getArgs('c-second --flag --string=strval --stealth --sstring="Hidden string"'),
 		});
 
-		expect(storage).toStrictEqual({
-			command: 'c-second',
-			options: {
-				flag: true,
-				string: 'strval',
-				sFlag: true,
-				sString: 'Hidden string',
-			},
-		});
+		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'strval',
+			sFlag: true,
+			sString: 'Hidden string',
+		}]);
 	});
 
 	it('Get the right command, command between args', async () => {
-		await runCli(commands, {
-			argSource: getArgs('--flag', '--string=strval', 'c-second', '--stealth', '--sstring=Hidden string'),
+		await run(commands, {
+			argSource: getArgs('--flag --string=strval c-second --stealth --sstring="Hidden string"'),
 		});
 
-		expect(storage).toStrictEqual({
-			command: 'c-second',
-			options: {
-				flag: true,
-				string: 'strval',
-				sFlag: true,
-				sString: 'Hidden string',
-			},
-		});
+		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'strval',
+			sFlag: true,
+			sString: 'Hidden string',
+		}]);
 	});
 
 	it('Get the right command, command after args', async () => {
-		await runCli(commands, {
-			argSource: getArgs('--flag', '--string=strval', '--stealth', '--sstring=Hidden string', 'c-second'),
+		await run(commands, {
+			argSource: getArgs('--flag --string=strval --stealth --sstring="Hidden string" c-second'),
 		});
 
-		expect(storage).toStrictEqual({
-			command: 'c-second',
-			options: {
-				flag: true,
-				string: 'strval',
-				sFlag: true,
-				sString: 'Hidden string',
-			},
-		});
+		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'strval',
+			sFlag: true,
+			sString: 'Hidden string',
+		}]);
 	});
 
 	it('Unknown command', async () => {
-		await expect(async () => await runCli(commands, { argSource: getArgs('unknown', '--somearg=somevalue', '-f') }))
+		await expect(async () => await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f') }))
 			.rejects
 			.toThrowError(
 				new Error(`Unknown command: 'unknown'.\nType '--help' to get help on the cli.`),
 			);
 	});
+
+	it('Get the right command, no args', async () => {
+		await run(commands, { argSource: getArgs('c-first'), eventHandler: testEventHandler });
+
+		expect(handlers.cFirst.mock.lastCall).toStrictEqual([{
+			flag: undefined,
+			string: undefined,
+			sFlag: undefined,
+			sString: undefined,
+		}]);
+	});
+
+	it('Get the right subcommand, subcommand before args', async () => {
+	});
+
+	it('Get the right subcommand, subcommand between args', async () => {
+	});
+
+	it('Get the right subcommand, subcommand after args', async () => {
+	});
+
+	it('Positionals in subcommand', async () => {});
+
+	it('Unknown subcommand', async () => {
+	});
+
+	it('Global help', async () => {});
+
+	it('Command help', async () => {});
+
+	it('Subcommand help', async () => {});
+
+	it('Hooks work in order', async () => {});
 });
 
 describe('Option definition tests', (it) => {
-	it('Duplicate names', async () => {
+	it('Duplicate names', () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('f', 'fl'),
@@ -312,7 +348,7 @@ describe('Option definition tests', (it) => {
 	it('Duplicate aliases', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('f', 'fl'),
@@ -325,7 +361,7 @@ describe('Option definition tests', (it) => {
 	it('Name repeats alias', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('f', 'fl'),
@@ -338,7 +374,7 @@ describe('Option definition tests', (it) => {
 	it('Alias repeats name', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('f', 'fl'),
@@ -351,7 +387,7 @@ describe('Option definition tests', (it) => {
 	it('Duplicate names in same option', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('flag', 'fl'),
@@ -364,7 +400,7 @@ describe('Option definition tests', (it) => {
 	it('Duplicate aliases in same option', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('fl', 'fl'),
@@ -377,7 +413,7 @@ describe('Option definition tests', (it) => {
 	it('Forbidden character in name', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('fl=ag').alias('f', 'fl'),
@@ -390,14 +426,48 @@ describe('Option definition tests', (it) => {
 	it('Forbidden character in alias', async () => {
 		expect(() =>
 			command({
-				name: '',
+				name: 'Name',
 				handler: (opt) => '',
 				options: {
-					opFirst: boolean('fl=ag').alias('f', 'f=l'),
+					opFirst: boolean('flag').alias('f', 'f=l'),
 					opSecond: boolean('flag2').alias('-f2', 'fl2'),
 				},
 			})
 		).toThrowError();
+	});
+
+	it('Positionals ignore old names', async () => {
+		command({
+			name: 'Name',
+			handler: (opt) => '',
+			options: {
+				opFirst: boolean('flag').alias('f', 'fl'),
+				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				pos: positional('--flag'),
+			},
+		});
+	});
+
+	it('Positional names get ignored', async () => {
+		command({
+			name: 'Name',
+			handler: (opt) => '',
+			options: {
+				pos: positional('--flag'),
+				opFirst: boolean('flag').alias('f', 'fl'),
+				opSecond: boolean('flag2').alias('-f2', 'fl2'),
+			},
+		});
+	});
+
+	it('Positional ignore name restrictions', async () => {
+		command({
+			name: 'Name',
+			handler: (opt) => '',
+			options: {
+				pos: positional('--fl=ag--'),
+			},
+		});
 	});
 });
 
@@ -409,7 +479,9 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await runCli([...commands, cmd]);
+			await run([...commands, cmd], {
+				eventHandler: testEventHandler,
+			});
 		}).rejects.toThrowError();
 	});
 
@@ -421,7 +493,7 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await runCli([...commands, cmd]);
+			await run([...commands, cmd]);
 		}).rejects.toThrowError();
 	});
 
@@ -433,7 +505,7 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await runCli([...commands, cmd]);
+			await run([...commands, cmd]);
 		}).rejects.toThrowError();
 	});
 
@@ -445,7 +517,7 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await runCli([...commands, cmd]);
+			await run([...commands, cmd]);
 		}).rejects.toThrowError();
 	});
 
@@ -497,48 +569,39 @@ describe('Command definition tests', (it) => {
 			sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 		};
 
+		const localFn = vi.fn();
+
 		const cmd = command({
 			name: 'c-tenth',
 			aliases: ['c10'],
 			options: opts,
 			handler: handler(opts, (options) => {
-				storage.command = 'c-tenth';
-				storage.options = options;
+				localFn(options);
 			}),
 		});
 
-		await runCli([cmd], {
-			argSource: getArgs('c-tenth', '-f', '-j', 'false', '--string=strval'),
+		await run([cmd], {
+			argSource: getArgs('c-tenth -f -j false --string=strval'),
+			eventHandler: testEventHandler,
 		});
 
-		expect(storage).toStrictEqual({
-			command: 'c-tenth',
-			options: {
-				flag: true,
-				sFlag: false,
-				string: 'strval',
-				sString: undefined,
-			},
-		});
+		expect(localFn.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'strval',
+			sFlag: false,
+			sString: undefined,
+		}]);
+	});
+
+	it('Optional handler with subcommands', async () => {
+	});
+
+	it('Error on no handler without subcommands', async () => {
+	});
+
+	it('Positionals with subcommands', async () => {
 	});
 });
-
-// to-do
-// describe('Custom handler tests', (it) => {
-// 	const customHelp = vi.fn;
-// 	const customCmdHelp = vi.fn;
-// 	const customVersion = vi.fn;
-
-// 	it('Help', () => {
-// 	});
-
-// 	it('Command help', () => {
-// 	});
-
-// 	it('Version', () => {
-// 		runCli(commands);
-// 	});
-// });
 
 describe('Type tests', (it) => {
 	const generateOps = {
@@ -555,6 +618,9 @@ describe('Type tests', (it) => {
 		defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
 		defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
 		debug: boolean('dbg').alias('g').hidden(),
+		num: number('num'),
+		pos: positional(),
+		int: number('num').int(),
 	};
 
 	it('Param type inferrence test', () => {
@@ -572,6 +638,9 @@ describe('Type tests', (it) => {
 			defFlag: boolean;
 			defString: string;
 			debug: boolean | undefined;
+			num: number | undefined;
+			pos: string | undefined;
+			int: number | undefined;
 		};
 
 		expectTypeOf<GenerateOptions>().toEqualTypeOf<ExpectedType>();
@@ -594,8 +663,14 @@ describe('Type tests', (it) => {
 			defFlag: boolean;
 			defString: string;
 			debug: boolean | undefined;
+			num: number | undefined;
+			pos: string | undefined;
+			int: number | undefined;
 		};
 
 		expectTypeOf<HandlerOpts>().toEqualTypeOf<ExpectedType>();
 	});
+
+	it('Transorm type mutation test', () => {});
+	it('Async transorm type mutation test', () => {});
 });
