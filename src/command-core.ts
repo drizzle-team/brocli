@@ -636,10 +636,10 @@ const parseOptions = (
 		if (!option) unrecognizedArgsArr.push(arg.split('=')[0]!);
 		if (skipNext) ++i;
 
-		result[name!] = data;
-
 		if (isHelp) return 'help';
 		if (isVersion) return 'version';
+
+		result[name!] = data;
 	}
 
 	for (const [optKey, option] of optEntries) {
@@ -725,19 +725,6 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 };
 
 const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
-
-const help = async (command: Command | string | undefined, commands: Command[], helpHandler: EventHandler) =>
-	typeof command === 'object'
-		? command.help !== undefined
-			? await executeOrLog(command.help)
-			: await helpHandler({
-				type: 'commandHelp',
-				command,
-			})
-		: await helpHandler({
-			type: 'globalHelp',
-			commands: commands,
-		});
 
 /**
  * Runs CLI commands
