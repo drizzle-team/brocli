@@ -129,7 +129,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 	const entries: [string, GenericBuilderInternalsFields][] = [];
 
-	const storedNames: Record<string, [string, ...string[]]> = {};
+	const storedNames: [string, ...string[]][] = [];
 
 	const cfgEntries = Object.entries(cloned);
 
@@ -177,9 +177,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			if (match) throw new BroCliError(`Can't define option ${cfg.name} - name '${match}' is reserved!`);
 		}
 
-		const storageVals = Object.values(storedNames);
-
-		for (const storage of storageVals) {
+		for (const storage of storedNames) {
 			const nameOccupier = storage.find((e) => e === cfg.name);
 
 			if (!nameOccupier) continue;
@@ -190,7 +188,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 		}
 
 		for (const alias of cfg.aliases) {
-			for (const storage of storageVals) {
+			for (const storage of storedNames) {
 				const nameOccupier = storage.find((e) => e === alias);
 
 				if (!nameOccupier) continue;
@@ -201,10 +199,12 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			}
 		}
 
-		storedNames[cfg.name!] = [cfg.name!, ...cfg.aliases];
+		const currentNames = [cfg.name!, ...cfg.aliases] as [string, ...string[]];
 
-		storedNames[cfg.name!]!.forEach((name, idx) => {
-			if (storedNames[cfg.name!]!.findIndex((e) => e === name) === idx) return;
+		storedNames.push(currentNames);
+
+		currentNames.forEach((name, idx) => {
+			if (currentNames.findIndex((e) => e === name) === idx) return;
 
 			throw new BroCliError(
 				`Can't define option '${cfg.name}': duplicate aliases '${name}'!`,
@@ -670,11 +670,6 @@ const parseOptions = (
 	}
 
 	return Object.keys(result).length ? result : undefined;
-};
-
-const executeOrLog = async (target: string | Function | undefined) => {
-	if (!target || typeof target === 'string') console.log(target);
-	else await target();
 };
 
 export const getCommandNameRecursive = (command: Command): string =>
