@@ -1,5 +1,7 @@
 import {
 	boolean,
+	BroCliError,
+	BroCliEvent,
 	type BroCliEventType,
 	type Command,
 	command,
@@ -109,7 +111,7 @@ commands.push(command({
 
 describe('Parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		await run(commands, { argSource: getArgs('generate --dialect=pg') });
+		await run(commands, { argSource: getArgs('generate --dialect=pg'), eventHandler: testEventHandler });
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
 			dialect: 'pg',
@@ -179,13 +181,19 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('generate') })).rejects.toThrowError(
-			new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
-		);
+		await expect(async () => await run(commands, { argSource: getArgs('generate'), eventHandler: testEventHandler }))
+			.rejects.toThrowError(
+				new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
+			);
 	});
 
 	it('Unrecognized options', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg --unknown-one -m') }))
+		await expect(async () =>
+			await run(commands, {
+				argSource: getArgs('generate --dialect=pg --unknown-one -m'),
+				eventHandler: testEventHandler,
+			})
+		)
 			.rejects
 			.toThrowError(
 				new Error(`Unrecognized options for command 'generate': --unknown-one`),
@@ -193,7 +201,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg -def=somevalue') }))
+		await expect(async () =>
+			await run(commands, {
+				argSource: getArgs('generate --dialect=pg -def=somevalue'),
+				eventHandler: testEventHandler,
+			})
+		)
 			.rejects
 			.toThrowError(
 				new Error(
@@ -203,7 +216,9 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('generate --dialect=pg -ds') })).rejects
+		await expect(async () =>
+			await run(commands, { argSource: getArgs('generate --dialect=pg -ds'), eventHandler: testEventHandler })
+		).rejects
 			.toThrowError(
 				new Error(
 					`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
@@ -266,6 +281,7 @@ describe('Parsing tests', (it) => {
 	it('Get the right command, command between args', async () => {
 		await run(commands, {
 			argSource: getArgs('--flag --string=strval c-second --stealth --sstring="Hidden string"'),
+			eventHandler: testEventHandler,
 		});
 
 		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
@@ -279,6 +295,7 @@ describe('Parsing tests', (it) => {
 	it('Get the right command, command after args', async () => {
 		await run(commands, {
 			argSource: getArgs('--flag --string=strval --stealth --sstring="Hidden string" c-second'),
+			eventHandler: testEventHandler,
 		});
 
 		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
@@ -290,7 +307,9 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f') }))
+		await expect(async () =>
+			await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f'), eventHandler: testEventHandler })
+		)
 			.rejects
 			.toThrowError(
 				new Error(`Unknown command: 'unknown'.\nType '--help' to get help on the cli.`),
@@ -333,7 +352,7 @@ describe('Parsing tests', (it) => {
 
 describe('Option definition tests', (it) => {
 	it('Duplicate names', () => {
-		expect(() =>
+		expect(() => {
 			command({
 				name: 'Name',
 				handler: (opt) => '',
@@ -341,11 +360,11 @@ describe('Option definition tests', (it) => {
 					opFirst: boolean('flag').alias('f', 'fl'),
 					opSecond: boolean('flag').alias('-f2', 'fl2'),
 				},
-			})
-		).toThrowError();
+			});
+		}).toThrowError();
 	});
 
-	it('Duplicate aliases', async () => {
+	it('Duplicate aliases', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -358,7 +377,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Name repeats alias', async () => {
+	it('Name repeats alias', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -371,7 +390,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Alias repeats name', async () => {
+	it('Alias repeats name', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -384,7 +403,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Duplicate names in same option', async () => {
+	it('Duplicate names in same option', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -397,7 +416,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Duplicate aliases in same option', async () => {
+	it('Duplicate aliases in same option', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -410,7 +429,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Forbidden character in name', async () => {
+	it('Forbidden character in name', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -423,7 +442,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Forbidden character in alias', async () => {
+	it('Forbidden character in alias', () => {
 		expect(() =>
 			command({
 				name: 'Name',
@@ -436,7 +455,7 @@ describe('Option definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Positionals ignore old names', async () => {
+	it('Positionals ignore old names', () => {
 		command({
 			name: 'Name',
 			handler: (opt) => '',
@@ -448,7 +467,7 @@ describe('Option definition tests', (it) => {
 		});
 	});
 
-	it('Positional names get ignored', async () => {
+	it('Positional names get ignored', () => {
 		command({
 			name: 'Name',
 			handler: (opt) => '',
@@ -460,7 +479,7 @@ describe('Option definition tests', (it) => {
 		});
 	});
 
-	it('Positional ignore name restrictions', async () => {
+	it('Positional ignore name restrictions', () => {
 		command({
 			name: 'Name',
 			handler: (opt) => '',
@@ -473,16 +492,19 @@ describe('Option definition tests', (it) => {
 
 describe('Command definition tests', (it) => {
 	it('Duplicate names', async () => {
-		await expect(async () => {
-			const cmd = command({
-				name: 'c-first',
-				handler: () => '',
-			});
+		const cmd = command({
+			name: 'c-first',
+			handler: () => '',
+		});
 
-			await run([...commands, cmd], {
-				eventHandler: testEventHandler,
-			});
-		}).rejects.toThrowError();
+		await run([...commands, cmd], {
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
+			type: 'commandsCompositionErrEvent',
+			message: `BroCli Error: Can't define command 'c-first': name is already in use by command 'c-first'!`,
+		}] as BroCliEvent[]);
 	});
 
 	it('Duplicate aliases', async () => {
@@ -493,7 +515,9 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await run([...commands, cmd]);
+			await run([...commands, cmd], {
+				eventHandler: testEventHandler,
+			});
 		}).rejects.toThrowError();
 	});
 
@@ -505,7 +529,9 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await run([...commands, cmd]);
+			await run([...commands, cmd], {
+				eventHandler: testEventHandler,
+			});
 		}).rejects.toThrowError();
 	});
 
@@ -517,11 +543,13 @@ describe('Command definition tests', (it) => {
 				handler: () => '',
 			});
 
-			await run([...commands, cmd]);
+			await run([...commands, cmd], {
+				eventHandler: testEventHandler,
+			});
 		}).rejects.toThrowError();
 	});
 
-	it('Duplicate names in same command', async () => {
+	it('Duplicate names in same command', () => {
 		expect(() =>
 			command({
 				name: 'c-sixth',
@@ -531,7 +559,7 @@ describe('Command definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Duplicate aliases in same command', async () => {
+	it('Duplicate aliases in same command', () => {
 		expect(() =>
 			command({
 				name: 'c-seventh',
@@ -541,7 +569,7 @@ describe('Command definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Forbidden character in name', async () => {
+	it('Forbidden character in name', () => {
 		expect(() =>
 			command({
 				name: '--c-eigth',
@@ -551,11 +579,87 @@ describe('Command definition tests', (it) => {
 		).toThrowError();
 	});
 
-	it('Forbidden character in alias', async () => {
+	it('Forbidden character in alias', () => {
 		expect(() =>
 			command({
 				name: 'c-ninth',
 				aliases: ['-c9'],
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden name - true', () => {
+		expect(() =>
+			command({
+				name: 'tRue',
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden name - false', () => {
+		expect(() =>
+			command({
+				name: 'FALSE',
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden name - 1', () => {
+		expect(() =>
+			command({
+				name: '1',
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden name - 0', () => {
+		expect(() =>
+			command({
+				name: '0',
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden alias - true', () => {
+		expect(() =>
+			command({
+				name: 'c-ninth',
+				aliases: ['trUe'],
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden alias - false', () => {
+		expect(() =>
+			command({
+				name: 'c-ninth',
+				aliases: ['FalSe'],
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden alias - 1', () => {
+		expect(() =>
+			command({
+				name: 'c-ninth',
+				aliases: ['1'],
+				handler: () => '',
+			})
+		).toThrowError();
+	});
+
+	it('Forbidden alias - 0', () => {
+		expect(() =>
+			command({
+				name: 'c-ninth',
+				aliases: ['0'],
 				handler: () => '',
 			})
 		).toThrowError();
