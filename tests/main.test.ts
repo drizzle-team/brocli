@@ -43,6 +43,7 @@ const hook = async (event: EventType, command: Command) => {
 };
 
 const testEventHandler: EventHandler = (event) => {
+	console.warn(event);
 	eventMocks[event.type](event);
 
 	return true;
@@ -361,7 +362,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag').alias('-f2', 'fl2'),
 				},
 			});
-		}).toThrowError();
+		}).toThrowError(new BroCliError(`Can't define option '--flag': name is already in use by option '--flag'!`));
 	});
 
 	it('Duplicate aliases', () => {
@@ -371,10 +372,10 @@ describe('Option definition tests', (it) => {
 				handler: (opt) => '',
 				options: {
 					opFirst: boolean('flag').alias('f', 'fl'),
-					opSecond: boolean('flag').alias('-f', 'fl'),
+					opSecond: boolean('flag2').alias('-f', 'fl'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define option '--flag2': alias '-f' is already in use by option '--flag'!`));
 	});
 
 	it('Name repeats alias', () => {
@@ -387,7 +388,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('fl').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define option '--fl': name is already in use by option '--flag'!`));
 	});
 
 	it('Alias repeats name', () => {
@@ -400,7 +401,9 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('flag', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(
+			new BroCliError(`Can't define option '--flag2': alias '--flag' is already in use by option '--flag'!`),
+		);
 	});
 
 	it('Duplicate names in same option', () => {
@@ -503,50 +506,60 @@ describe('Command definition tests', (it) => {
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
 			type: 'commandsCompositionErrEvent',
-			message: `BroCli Error: Can't define command 'c-first': name is already in use by command 'c-first'!`,
+			message: "BroCli error: Can't define command 'c-first': name is already in use by command 'c-first'!",
 		}] as BroCliEvent[]);
 	});
 
 	it('Duplicate aliases', async () => {
-		await expect(async () => {
-			const cmd = command({
-				name: 'c-third',
-				aliases: ['g'],
-				handler: () => '',
-			});
+		const cmd = command({
+			name: 'c-third',
+			aliases: ['g'],
+			handler: () => '',
+		});
 
-			await run([...commands, cmd], {
-				eventHandler: testEventHandler,
-			});
-		}).rejects.toThrowError();
+		await run([...commands, cmd], {
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
+			type: 'commandsCompositionErrEvent',
+			message: "BroCli error: Can't define command 'c-third': alias 'g' is already in use by command 'generate'!",
+		}] as BroCliEvent[]);
 	});
 
 	it('Name repeats alias', async () => {
-		await expect(async () => {
-			const cmd = command({
-				name: 'gen',
-				aliases: ['c4'],
-				handler: () => '',
-			});
+		const cmd = command({
+			name: 'gen',
+			aliases: ['c4'],
+			handler: () => '',
+		});
 
-			await run([...commands, cmd], {
-				eventHandler: testEventHandler,
-			});
-		}).rejects.toThrowError();
+		await run([...commands, cmd], {
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
+			type: 'commandsCompositionErrEvent',
+			message: "BroCli error: Can't define command 'gen': name is already in use by command 'generate'!",
+		}] as BroCliEvent[]);
 	});
 
 	it('Alias repeats name', async () => {
-		await expect(async () => {
-			const cmd = command({
-				name: 'c-fifth',
-				aliases: ['generate'],
-				handler: () => '',
-			});
+		const cmd = command({
+			name: 'c-fifth',
+			aliases: ['generate'],
+			handler: () => '',
+		});
 
-			await run([...commands, cmd], {
-				eventHandler: testEventHandler,
-			});
-		}).rejects.toThrowError();
+		await run([...commands, cmd], {
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
+			type: 'commandsCompositionErrEvent',
+			message:
+				"BroCli error: Can't define command 'c-fifth': alias 'generate' is already in use by command 'generate'!",
+		}] as BroCliEvent[]);
 	});
 
 	it('Duplicate names in same command', () => {

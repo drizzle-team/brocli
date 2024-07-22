@@ -686,7 +686,7 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 
 			if (!nameOccupier) continue;
 
-			throw new Error(
+			throw new BroCliError(
 				`Can't define command '${getCommandNameRecursive(cmd)}': name is already in use by command '${
 					parent ? `${getCommandNameRecursive(parent)} ` : ''
 				}${storage[0]}'!`,
@@ -700,7 +700,7 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 
 					if (!nameOccupier) continue;
 
-					throw new Error(
+					throw new BroCliError(
 						`Can't define command '${getCommandNameRecursive(cmd)}': alias '${alias}' is already in use by command '${
 							parent ? `${getCommandNameRecursive(parent)} ` : ''
 						}${storage[0]}'!`,
