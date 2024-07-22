@@ -420,15 +420,14 @@ const parseArg = (
 
 		const pos = positionals.shift()!;
 
-		if (pos[1].enumVals && !pos[1].enumVals.find((val) => val === dataPart)) {
+		if (pos[1].enumVals && !pos[1].enumVals.find((val) => val === arg)) {
 			throw new BroCliError(undefined, {
 				type: 'validationError',
 				violation: 'Enum violation',
 				command,
 				option: pos[1],
 				offender: {
-					namePart,
-					dataPart,
+					dataPart: arg,
 				},
 			});
 		}
@@ -539,7 +538,7 @@ const parseArg = (
 			if (isNaN(numData)) {
 				throw new BroCliError(undefined, {
 					type: 'validationError',
-					violation: 'Invalid number syntax',
+					violation: 'Invalid number value',
 					option: opt,
 					command,
 					offender: {
@@ -588,7 +587,7 @@ const parseArg = (
 				});
 			}
 
-			data = dataPart;
+			data = numData;
 
 			return true;
 		}
@@ -672,8 +671,8 @@ const parseOptions = (
 	return Object.keys(result).length ? result : undefined;
 };
 
-export const getCommandNameRecursive = (command: Command): string =>
-	command.parent ? `${getCommandNameRecursive(command.parent)} ${command.name}` : command.name;
+export const getCommandNameWithParents = (command: Command): string =>
+	command.parent ? `${getCommandNameWithParents(command.parent)} ${command.name}` : command.name;
 
 const validateCommands = (commands: Command[], parent?: Command) => {
 	const storedNames: Record<string, [string, ...string[]]> = {};
@@ -687,8 +686,8 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 			if (!nameOccupier) continue;
 
 			throw new BroCliError(
-				`Can't define command '${getCommandNameRecursive(cmd)}': name is already in use by command '${
-					parent ? `${getCommandNameRecursive(parent)} ` : ''
+				`Can't define command '${getCommandNameWithParents(cmd)}': name is already in use by command '${
+					parent ? `${getCommandNameWithParents(parent)} ` : ''
 				}${storage[0]}'!`,
 			);
 		}
@@ -701,8 +700,8 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 					if (!nameOccupier) continue;
 
 					throw new BroCliError(
-						`Can't define command '${getCommandNameRecursive(cmd)}': alias '${alias}' is already in use by command '${
-							parent ? `${getCommandNameRecursive(parent)} ` : ''
+						`Can't define command '${getCommandNameWithParents(cmd)}': alias '${alias}' is already in use by command '${
+							parent ? `${getCommandNameWithParents(parent)} ` : ''
 						}${storage[0]}'!`,
 					);
 				}
@@ -747,6 +746,8 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			});
 		}
 
+		// console.log(args);
+
 		const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 		if (
 			helpIndex !== -1 && (helpIndex > 0
@@ -778,6 +779,9 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 		}
 
 		const { command, args: newArgs } = getCommand(processedCmds, args);
+
+		// console.log((<any> command).name, newArgs);
+
 		if (!command) {
 			return await eventHandler({
 				type: 'globalHelp',
@@ -809,6 +813,8 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 		}
 
 		const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
+
+		// console.log('Option result:', optionResult);
 
 		if (optionResult === 'help') {
 			return await eventHandler({

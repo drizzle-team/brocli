@@ -1,4 +1,4 @@
-import { type Command, command, getCommandNameRecursive } from './command-core';
+import { type Command, command, getCommandNameWithParents } from './command-core';
 import { defaultTheme } from './help-themes';
 import type { ProcessedBuilderConfig } from './option-builder';
 
@@ -66,7 +66,7 @@ export type ValidationErrorEvent = {
 	command: Command;
 	option: ProcessedBuilderConfig;
 	offender: {
-		namePart: string;
+		namePart?: string;
 		dataPart?: string;
 	};
 	violation: ValidationViolation;
@@ -132,7 +132,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		}
 
 		case 'unknownSubcommandEvent': {
-			const cName = getCommandNameRecursive(event.command);
+			const cName = getCommandNameWithParents(event.command);
 			const msg = `Unknown command: ${cName} ${event.offender}.\nType '${cName} --help' to get the help on command.`;
 
 			console.error(msg);

@@ -44,6 +44,7 @@ const hook = async (event: EventType, command: Command) => {
 
 const testEventHandler: EventHandler = (event) => {
 	console.warn(event);
+
 	eventMocks[event.type](event);
 
 	return true;
@@ -53,12 +54,15 @@ const handlers = {
 	generate: vi.fn(),
 	cFirst: vi.fn(),
 	cSecond: vi.fn(),
+	sub: vi.fn(),
+	deep: vi.fn(),
 };
 
 const commands: Command[] = [];
 
 const generateOps = {
-	dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
+	dialect: string().alias('-d', '-dlc').enum('pg', 'sqlite', 'mysql').desc('Database dialect [pg, mysql, sqlite]')
+		.required(),
 	schema: string('schema').alias('s').desc('Path to a schema file or folder'),
 	out: string().alias('o').desc("Output folder, 'drizzle' by default"),
 	name: string().alias('n').desc('Migration file name'),
@@ -71,12 +75,17 @@ const generateOps = {
 	defFlag: boolean().alias('-def').desc('Example boolean field with default').default(true),
 	defString: string().alias('-ds').desc('Example string field with default').default('Defaultvalue'),
 	debug: boolean('dbg').alias('g').hidden(),
+	num: number().alias('-nb').min(-10).max(10),
+	int: number().alias('i').int(),
+	pos: positional('Positional'),
+	enpos: positional('Enum positional').enum('first', 'second', 'third'),
 };
 
 const generate = command({
 	name: 'generate',
 	aliases: ['g', 'gen'],
 	desc: 'Generate drizzle migrations',
+	shortDesc: 'Generate migrations',
 	hidden: false,
 	options: generateOps,
 	handler: handlers.generate,
@@ -91,11 +100,31 @@ const cFirstOps = {
 	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 };
 
+const cSubOps = {
+	flag: boolean().alias('f', 'fl').desc('Boolean value'),
+	string: string().alias('s', 'str').desc('String value'),
+	pos: positional(),
+};
+
 const cFirst = command({
 	name: 'c-first',
 	options: cFirstOps,
 	handler: handlers.cFirst,
 	hidden: false,
+	subcommands: [
+		command({
+			name: 'sub',
+			options: cSubOps,
+			handler: handlers.sub,
+		}),
+		command({
+			name: 'nohandler',
+			subcommands: [command({
+				name: 'deep',
+				handler: handlers.deep,
+			})],
+		}),
+	],
 });
 
 commands.push(cFirst);
@@ -132,6 +161,10 @@ describe('Parsing tests', (it) => {
 			defFlag: true,
 			defString: 'Defaultvalue',
 			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: undefined,
+			enpos: undefined,
 		}]);
 	});
 
@@ -140,7 +173,7 @@ describe('Parsing tests', (it) => {
 			commands,
 			{
 				argSource: getArgs(
-					'generate --dialect pg --schema=./schemapath.ts --out=./outfile.ts --name="Example migration" --breakpoints=breakpoints --custom="custom value" --flag --defFlag false --dbg=true',
+					'generate --dialect pg --schema=./schemapath.ts --out=./outfile.ts --name="Example migration" --breakpoints=breakpoints --custom="custom value" --flag --defFlag false --dbg=true --num 5.5 --int=2 posval second',
 				),
 				eventHandler: testEventHandler,
 			},
@@ -158,6 +191,10 @@ describe('Parsing tests', (it) => {
 			defFlag: false,
 			defString: 'Defaultvalue',
 			debug: true,
+			num: 5.5,
+			int: 2,
+			pos: 'posval',
+			enpos: 'second',
 		}]);
 	});
 
@@ -166,7 +203,7 @@ describe('Parsing tests', (it) => {
 			commands,
 			{
 				argSource: getArgs(
-					'generate -dlc pg -s=./schemapath.ts -o=./outfile.ts -n="Example migration" --break=breakpoints --cus="custom value" -f -def false -ds=Not=Default=Value -g=true',
+					'generate -dlc pg -s=./schemapath.ts -o=./outfile.ts -n="Example migration" --break=breakpoints --cus="custom value" -f -def false -ds=Not=Default=Value -g=true -nb=5.5 -i=2 posval second',
 				),
 				eventHandler: testEventHandler,
 			},
@@ -184,6 +221,10 @@ describe('Parsing tests', (it) => {
 			defFlag: false,
 			defString: 'Not=Default=Value',
 			debug: true,
+			num: 5.5,
+			int: 2,
+			pos: 'posval',
+			enpos: 'second',
 		}]);
 	});
 
@@ -220,7 +261,7 @@ describe('Parsing tests', (it) => {
 			type: 'validationError',
 			violation: 'Invalid boolean syntax',
 			command: generate,
-			option: generate.options!['defFlag' as keyof typeof generate.options]!.config,
+			option: generate.options!['defFlag']!.config,
 			offender: {
 				namePart: '-def',
 				dataPart: 'somevalue',
@@ -235,7 +276,7 @@ describe('Parsing tests', (it) => {
 			type: 'validationError',
 			violation: 'Invalid string syntax',
 			command: generate,
-			option: generate.options!['defString' as keyof typeof generate.options]!.config,
+			option: generate.options!['defString']!.config,
 			offender: {
 				namePart: '-ds',
 				dataPart: undefined,
@@ -243,9 +284,35 @@ describe('Parsing tests', (it) => {
 		}] as BroCliEvent[]);
 	});
 
-	it('Wrong type: string to number', async () => {});
+	it('Wrong type: string to number', async () => {
+		await run(commands, { argSource: getArgs('generate --dialect=pg -nb string'), eventHandler: testEventHandler });
 
-	it('Enum violation', async () => {});
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Invalid number value',
+			command: generate,
+			option: generate.options!['num']!.config,
+			offender: {
+				namePart: '-nb',
+				dataPart: 'string',
+			},
+		}] as BroCliEvent[]);
+	});
+
+	it('Enum violation', async () => {
+		await run(commands, { argSource: getArgs('generate --dialect=wrong'), eventHandler: testEventHandler });
+
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Enum violation',
+			command: generate,
+			option: generate.options!['dialect']!.config,
+			offender: {
+				namePart: '--dialect',
+				dataPart: 'wrong',
+			},
+		}] as BroCliEvent[]);
+	});
 
 	it('Positional enum violation', async () => {});
 

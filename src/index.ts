@@ -13,7 +13,7 @@ export type {
 	RawCommand,
 	TestResult,
 } from './command-core';
-export { command, commandsInfo, handler, run, test } from './command-core';
+export { command, commandsInfo, getCommandNameWithParents, handler, run, test } from './command-core';
 export type {
 	BroCliEvent,
 	BroCliEventType,
