@@ -720,6 +720,10 @@ describe('Command definition tests', (it) => {
 	});
 });
 
+describe('Test function string to args convertion tests', (it) => {
+	// TBD
+});
+
 describe('Type tests', (it) => {
 	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
