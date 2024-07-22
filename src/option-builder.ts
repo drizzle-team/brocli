@@ -283,7 +283,7 @@ export class OptionBuilderBase<
 		const config = this.config();
 
 		const minVal = config.minVal;
-		if (minVal !== undefined && minVal < value) {
+		if (minVal !== undefined && minVal > value) {
 			throw new BroCliError("Unable to define option's max value to be lower than min value!");
 		}
 
