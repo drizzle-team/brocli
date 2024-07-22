@@ -73,14 +73,16 @@ const generateOps = {
 	debug: boolean('dbg').alias('g').hidden(),
 };
 
-commands.push(command({
+const generate = command({
 	name: 'generate',
 	aliases: ['g', 'gen'],
 	desc: 'Generate drizzle migrations',
 	hidden: false,
 	options: generateOps,
 	handler: handlers.generate,
-}));
+});
+
+commands.push(generate);
 
 const cFirstOps = {
 	flag: boolean().alias('f', 'fl').desc('Boolean value'),
@@ -89,12 +91,14 @@ const cFirstOps = {
 	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 };
 
-commands.push(command({
+const cFirst = command({
 	name: 'c-first',
 	options: cFirstOps,
 	handler: handlers.cFirst,
 	hidden: false,
-}));
+});
+
+commands.push(cFirst);
 
 const cSecondOps = {
 	flag: boolean().alias('f', 'fl').desc('Boolean value'),
@@ -103,12 +107,14 @@ const cSecondOps = {
 	sString: string('sstring').alias('q', 'hs').desc('String value').hidden(),
 };
 
-commands.push(command({
+const cSecond = command({
 	name: 'c-second',
 	options: cSecondOps,
 	handler: handlers.cSecond,
 	hidden: false,
-}));
+});
+
+commands.push(cSecond);
 
 describe('Parsing tests', (it) => {
 	it('Required options & defaults', async () => {
@@ -182,50 +188,72 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		await expect(async () => await run(commands, { argSource: getArgs('generate'), eventHandler: testEventHandler }))
-			.rejects.toThrowError(
-				new Error(`Command 'generate' is missing following required options: --dialect [-d, -dlc]`),
-			);
+		await run(commands, { argSource: getArgs('generate'), eventHandler: testEventHandler });
+
+		expect(eventMocks.missingArgsErr.mock.lastCall).toStrictEqual([{
+			type: 'missingArgsErr',
+			command: generate,
+			missing: [['--dialect', '-d', '-dlc']],
+		}] as BroCliEvent[]);
 	});
 
 	it('Unrecognized options', async () => {
-		await expect(async () =>
-			await run(commands, {
-				argSource: getArgs('generate --dialect=pg --unknown-one -m'),
-				eventHandler: testEventHandler,
-			})
-		)
-			.rejects
-			.toThrowError(
-				new Error(`Unrecognized options for command 'generate': --unknown-one`),
-			);
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg --unknown-one -m'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.unrecognizedArgsErr.mock.lastCall).toStrictEqual([{
+			type: 'unrecognizedArgsErr',
+			command: generate,
+			unrecognized: ['--unknown-one'],
+		}] as BroCliEvent[]);
 	});
 
 	it('Wrong type: string to boolean', async () => {
-		await expect(async () =>
-			await run(commands, {
-				argSource: getArgs('generate --dialect=pg -def=somevalue'),
-				eventHandler: testEventHandler,
-			})
-		)
-			.rejects
-			.toThrowError(
-				new Error(
-					`Invalid syntax: boolean type argument '-def' must have it's value passed in the following formats: -def=<value> | -def <value> | -def.\nAllowed values: true, false, 0, 1`,
-				),
-			);
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -def=somevalue'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Invalid boolean syntax',
+			command: generate,
+			option: generate.options!['defFlag' as keyof typeof generate.options]!.config,
+			offender: {
+				namePart: '-def',
+				dataPart: 'somevalue',
+			},
+		}] as BroCliEvent[]);
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		await expect(async () =>
-			await run(commands, { argSource: getArgs('generate --dialect=pg -ds'), eventHandler: testEventHandler })
-		).rejects
-			.toThrowError(
-				new Error(
-					`Invalid syntax: string type argument '-ds' must have it's value passed in the following formats: -ds=<value> | -ds <value>`,
-				),
-			);
+		await run(commands, { argSource: getArgs('generate --dialect=pg -ds'), eventHandler: testEventHandler });
+
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Invalid string syntax',
+			command: generate,
+			option: generate.options!['defString' as keyof typeof generate.options]!.config,
+			offender: {
+				namePart: '-ds',
+				dataPart: undefined,
+			},
+		}] as BroCliEvent[]);
 	});
+
+	it('Wrong type: string to number', async () => {});
+
+	it('Enum violation', async () => {});
+
+	it('Positional enum violation', async () => {});
+
+	it('Min value violation', async () => {});
+
+	it('Max value violation', async () => {});
+
+	it('Int violation', async () => {});
 
 	it('Positional in order', async () => {});
 
@@ -249,7 +277,11 @@ describe('Parsing tests', (it) => {
 
 	it('Command --help', async () => {});
 
+	it('Command --help, off position', async () => {});
+
 	it('Command -h', async () => {});
+
+	it('Command -h, off position', async () => {});
 
 	it('--version', async () => {});
 
@@ -308,13 +340,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		await expect(async () =>
-			await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f'), eventHandler: testEventHandler })
-		)
-			.rejects
-			.toThrowError(
-				new Error(`Unknown command: 'unknown'.\nType '--help' to get help on the cli.`),
-			);
+		await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f'), eventHandler: testEventHandler });
+
+		expect(eventMocks.unknownCommandEvent.mock.lastCall).toStrictEqual([{
+			type: 'unknownCommandEvent',
+			offender: 'unknown',
+		}] as BroCliEvent[]);
 	});
 
 	it('Get the right command, no args', async () => {
@@ -339,16 +370,13 @@ describe('Parsing tests', (it) => {
 
 	it('Positionals in subcommand', async () => {});
 
-	it('Unknown subcommand', async () => {
-	});
+	it('Unknown subcommand', async () => {});
 
 	it('Global help', async () => {});
 
 	it('Command help', async () => {});
 
 	it('Subcommand help', async () => {});
-
-	it('Hooks work in order', async () => {});
 });
 
 describe('Option definition tests', (it) => {
@@ -720,8 +748,56 @@ describe('Command definition tests', (it) => {
 	});
 });
 
+describe('Config options tests', (it) => {
+	it('Omit undefined keys: true', async () => {});
+
+	it('Omit undefined keys: false', async () => {});
+
+	it('Custom gloabl help is called', async () => {});
+
+	it('Custom version is called', async () => {});
+});
+
+describe('Hook tests', (it) => {
+	it('Before', async () => {});
+
+	it('After', async () => {});
+
+	it('Before & after', async () => {});
+});
+
+describe('Default event handler correct behaviour tests', (it) => {
+	it('Global --help', async () => {});
+
+	it('Global -h', async () => {});
+
+	it('Command --help', async () => {});
+
+	it('Command -h', async () => {});
+
+	it('Global help', async () => {});
+
+	it('Command help', async () => {});
+
+	it('--version', async () => {});
+
+	it('-v', async () => {});
+});
+
 describe('Test function string to args convertion tests', (it) => {
-	// TBD
+	it('Empty string', async () => {});
+
+	it('Regular format', async () => {});
+
+	it('With quotes', async () => {});
+
+	it('With quotes and spaces', async () => {});
+
+	it('With quotes and spaces, multiline', async () => {});
+
+	it('Empty multiline', async () => {});
+
+	it('Multiline', async () => {});
 });
 
 describe('Type tests', (it) => {
@@ -793,5 +869,6 @@ describe('Type tests', (it) => {
 	});
 
 	it('Transorm type mutation test', () => {});
+
 	it('Async transorm type mutation test', () => {});
 });
