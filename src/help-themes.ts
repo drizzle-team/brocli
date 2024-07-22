@@ -8,7 +8,7 @@ export const defaultTheme = (calledFor: Command | Command[]) => {
 		const tableCmds = cmds.map((cmd) => ({
 			name: cmd.name,
 			aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
-			description: cmd.description ?? '-',
+			description: cmd.desc ?? '-',
 		}));
 
 		console.log(`Here's the list of all available commands:`);
@@ -31,7 +31,7 @@ export const defaultTheme = (calledFor: Command | Command[]) => {
 
 		console.log(
 			`Command: ${calledFor.name}${calledFor.aliases ? ` [${calledFor.aliases.join(', ')}]` : ''}${
-				calledFor.description ? ` - ${calledFor.description}` : ''
+				calledFor.desc ? ` - ${calledFor.desc}` : ''
 			}`,
 		);
 
@@ -189,7 +189,7 @@ const commandHelp = (command: Command) => {
 	const cmd = prepareCommandString(command);
 	const options = command.options ? prepareOptionStrings(command.options) : '';
 
-	const toLog = [command.description, cmd, options].filter((e) => e !== '').join('\n\n');
+	const toLog = [command.desc, cmd, options].filter((e) => e !== '').join('\n\n');
 
 	console.log(toLog);
 };
