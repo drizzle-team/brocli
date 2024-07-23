@@ -142,14 +142,14 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 		if (cfg.name!.includes('=')) {
 			throw new BroCliError(
-				`Can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
+				`Can't define option '${generatePrefix(cfg.name)}' - option names and aliases cannot contain '='!`,
 			);
 		}
 
 		for (const alias of cfg.aliases) {
 			if (alias.includes('=')) {
 				throw new BroCliError(
-					`Can't define option ${cfg.name} - option names and aliases cannot contain '='!`,
+					`Can't define option '${generatePrefix(cfg.name)}' - option names and aliases cannot contain '='!`,
 				);
 			}
 		}
@@ -174,7 +174,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 
 		for (const name of allNames) {
 			const match = reservedNames.find((n) => n === name);
-			if (match) throw new BroCliError(`Can't define option ${cfg.name} - name '${match}' is reserved!`);
+			if (match) throw new BroCliError(`Can't define option '${cfg.name}' - name '${match}' is reserved!`);
 		}
 
 		for (const storage of storedNames) {
@@ -183,7 +183,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			if (!nameOccupier) continue;
 
 			throw new BroCliError(
-				`Can't define option '${cfg.name}': name is already in use by option '${storage[0]}'!`,
+				`Can't define option '${cfg.name}' - name is already in use by option '${storage[0]}'!`,
 			);
 		}
 
@@ -194,7 +194,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 				if (!nameOccupier) continue;
 
 				throw new BroCliError(
-					`Can't define option '${cfg.name}': alias '${alias}' is already in use by option '${storage[0]}'!`,
+					`Can't define option '${cfg.name}' - alias '${alias}' is already in use by option '${storage[0]}'!`,
 				);
 			}
 		}
@@ -207,7 +207,7 @@ const validateOptions = <TOptionConfig extends Record<string, GenericBuilderInte
 			if (currentNames.findIndex((e) => e === name) === idx) return;
 
 			throw new BroCliError(
-				`Can't define option '${cfg.name}': duplicate aliases '${name}'!`,
+				`Can't define option '${cfg.name}' - duplicate alias '${name}'!`,
 			);
 		});
 

@@ -905,7 +905,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag').alias('-f2', 'fl2'),
 				},
 			});
-		}).toThrowError(new BroCliError(`Can't define option '--flag': name is already in use by option '--flag'!`));
+		}).toThrowError(new BroCliError(`Can't define option '--flag' - name is already in use by option '--flag'!`));
 	});
 
 	it('Duplicate aliases', () => {
@@ -918,7 +918,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('-f', 'fl'),
 				},
 			})
-		).toThrowError(new BroCliError(`Can't define option '--flag2': alias '-f' is already in use by option '--flag'!`));
+		).toThrowError(new BroCliError(`Can't define option '--flag2' - alias '-f' is already in use by option '--flag'!`));
 	});
 
 	it('Name repeats alias', () => {
@@ -931,7 +931,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('fl').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError(new BroCliError(`Can't define option '--fl': name is already in use by option '--flag'!`));
+		).toThrowError(new BroCliError(`Can't define option '--fl' - name is already in use by option '--flag'!`));
 	});
 
 	it('Alias repeats name', () => {
@@ -945,7 +945,7 @@ describe('Option definition tests', (it) => {
 				},
 			})
 		).toThrowError(
-			new BroCliError(`Can't define option '--flag2': alias '--flag' is already in use by option '--flag'!`),
+			new BroCliError(`Can't define option '--flag2' - alias '--flag' is already in use by option '--flag'!`),
 		);
 	});
 
@@ -959,7 +959,9 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(
+			new BroCliError(`Can't define option '--flag' - duplicate alias '--flag'!`),
+		);
 	});
 
 	it('Duplicate aliases in same option', () => {
@@ -972,7 +974,9 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(
+			new BroCliError(`Can't define option '--flag' - duplicate alias '--fl'!`),
+		);
 	});
 
 	it('Forbidden character in name', () => {
@@ -985,7 +989,7 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define option '--fl=ag' - option names and aliases cannot contain '='!`));
 	});
 
 	it('Forbidden character in alias', () => {
@@ -998,7 +1002,59 @@ describe('Option definition tests', (it) => {
 					opSecond: boolean('flag2').alias('-f2', 'fl2'),
 				},
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define option '--flag' - option names and aliases cannot contain '='!`));
+	});
+
+	it('Reserved names: --help', () => {
+		expect(() =>
+			command({
+				name: 'Name',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('help').alias('f', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
+			})
+		).toThrowError(new BroCliError(`Can't define option '--help' - name '--help' is reserved!`));
+	});
+
+	it('Reserved names: -h', () => {
+		expect(() =>
+			command({
+				name: 'Name',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('h', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
+			})
+		).toThrowError(new BroCliError(`Can't define option '--flag' - name '-h' is reserved!`));
+	});
+
+	it('Reserved names: --version', () => {
+		expect(() =>
+			command({
+				name: 'Name',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('flag').alias('version', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
+			})
+		).toThrowError(new BroCliError(`Can't define option '--flag' - name '--version' is reserved!`));
+	});
+
+	it('Reserved names: -v', () => {
+		expect(() =>
+			command({
+				name: 'Name',
+				handler: (opt) => '',
+				options: {
+					opFirst: boolean('v').alias('h', 'fl'),
+					opSecond: boolean('flag2').alias('-f2', 'fl2'),
+				},
+			})
+		).toThrowError(new BroCliError(`Can't define option '-v' - name '-v' is reserved!`));
 	});
 
 	it('Positionals ignore old names', () => {
