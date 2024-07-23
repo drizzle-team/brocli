@@ -240,6 +240,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.missingArgsErr.mock.lastCall).toStrictEqual([{
 			type: 'missingArgsErr',
+			cliName: undefined,
 			command: generate,
 			missing: [['--dialect', '-d', '-dlc']],
 		}] as BroCliEvent[]);
@@ -255,6 +256,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.unrecognizedArgsErr.mock.lastCall).toStrictEqual([{
 			type: 'unrecognizedArgsErr',
+			cliName: undefined,
 			command: generate,
 			unrecognized: ['--unknown-one'],
 		}] as BroCliEvent[]);
@@ -270,6 +272,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Invalid boolean syntax',
 			command: generate,
 			option: generate.options!['defFlag']!.config,
@@ -290,6 +293,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Invalid string syntax',
 			command: generate,
 			option: generate.options!['defString']!.config,
@@ -310,6 +314,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Invalid number value',
 			command: generate,
 			option: generate.options!['num']!.config,
@@ -330,6 +335,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Enum violation',
 			command: generate,
 			option: generate.options!['dialect']!.config,
@@ -350,6 +356,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Enum violation',
 			command: generate,
 			option: generate.options!['enpos']!.config,
@@ -369,6 +376,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Below min',
 			command: generate,
 			option: generate.options!['num']!.config,
@@ -389,6 +397,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Above max',
 			command: generate,
 			option: generate.options!['num']!.config,
@@ -409,6 +418,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
+			cliName: undefined,
 			violation: 'Expected int',
 			command: generate,
 			option: generate.options!['int']!.config,
@@ -652,6 +662,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.unknownCommandEvent.mock.lastCall).toStrictEqual([{
 			type: 'unknownCommandEvent',
+			cliName: undefined,
 			offender: 'unknown',
 		}] as BroCliEvent[]);
 	});
@@ -753,6 +764,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.unknownSubcommandEvent.mock.lastCall).toStrictEqual([{
 			type: 'unknownSubcommandEvent',
+			cliName: undefined,
 			offender: 'unrecognized',
 			command: cFirst,
 		}] as BroCliEvent[]);
@@ -827,6 +839,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
+			cliName: undefined,
 			commands: commands,
 		}] as BroCliEvent[]);
 	});
@@ -842,6 +855,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
+			cliName: undefined,
 			commands: commands,
 		}] as BroCliEvent[]);
 	});
@@ -857,6 +871,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: generate,
 		}] as BroCliEvent[]);
 	});
@@ -872,6 +887,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: cFirst.subcommands![0],
 		}] as BroCliEvent[]);
 	});
@@ -887,6 +903,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(3);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: generate,
 		}] as BroCliEvent[]);
 	});
@@ -902,6 +919,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(4);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: generate,
 		}] as BroCliEvent[]);
 	});
@@ -917,6 +935,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(5);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: generate,
 		}] as BroCliEvent[]);
 	});
@@ -932,6 +951,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(3);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
+			cliName: undefined,
 			commands: commands,
 		}] as BroCliEvent[]);
 	});
@@ -947,6 +967,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(6);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: generate,
 		}] as BroCliEvent[]);
 	});
@@ -962,6 +983,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(7);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: cFirst.subcommands![0]!,
 		}] as BroCliEvent[]);
 	});
@@ -977,6 +999,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(8);
 		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
 			type: 'commandHelp',
+			cliName: undefined,
 			command: cFirst.subcommands![1]!,
 		}] as BroCliEvent[]);
 	});
@@ -990,6 +1013,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.version.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
 			type: 'version',
+			cliName: undefined,
 		}] as BroCliEvent[]);
 	});
 
@@ -1002,6 +1026,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.version.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
 			type: 'version',
+			cliName: undefined,
 		}] as BroCliEvent[]);
 	});
 });
@@ -1219,6 +1244,7 @@ describe('Command definition tests', (it) => {
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
 			type: 'commandsCompositionErrEvent',
+			cliName: undefined,
 			message: "BroCli error: Can't define command 'c-first': name is already in use by command 'c-first'!",
 		}] as BroCliEvent[]);
 	});
@@ -1238,6 +1264,7 @@ describe('Command definition tests', (it) => {
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
 			type: 'commandsCompositionErrEvent',
+			cliName: undefined,
 			message: "BroCli error: Can't define command 'c-third': alias 'g' is already in use by command 'generate'!",
 		}] as BroCliEvent[]);
 	});
@@ -1257,6 +1284,7 @@ describe('Command definition tests', (it) => {
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
 			type: 'commandsCompositionErrEvent',
+			cliName: undefined,
 			message: "BroCli error: Can't define command 'gen': name is already in use by command 'generate'!",
 		}] as BroCliEvent[]);
 	});
@@ -1276,6 +1304,7 @@ describe('Command definition tests', (it) => {
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
 			type: 'commandsCompositionErrEvent',
+			cliName: undefined,
 			message:
 				"BroCli error: Can't define command 'c-fifth': alias 'generate' is already in use by command 'generate'!",
 		}] as BroCliEvent[]);

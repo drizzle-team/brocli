@@ -3,48 +3,57 @@ import type { ProcessedBuilderConfig } from './option-builder';
 
 export type CommandHelpEvent = {
 	type: 'commandHelp';
+	cliName: string | undefined;
 	command: Command;
 };
 
 export type GlobalHelpEvent = {
 	type: 'globalHelp';
+	cliName: string | undefined;
 	commands: Command[];
 };
 
 export type MissingArgsEvent = {
 	type: 'missingArgsErr';
+	cliName: string | undefined;
 	command: Command;
 	missing: [string[], ...string[][]];
 };
 
 export type UnrecognizedArgsEvent = {
 	type: 'unrecognizedArgsErr';
+	cliName: string | undefined;
 	command: Command;
 	unrecognized: [string, ...string[]];
 };
 
 export type UnknownCommandEvent = {
 	type: 'unknownCommandEvent';
+	cliName: string | undefined;
 	offender: string;
 };
 
 export type UnknownSubcommandEvent = {
 	type: 'unknownSubcommandEvent';
+	cliName: string | undefined;
 	command: Command;
 	offender: string;
 };
 
 export type UnknownErrorEvent = {
 	type: 'unknownError';
+	cliName: string | undefined;
 	error: unknown;
 };
 
 export type VersionEvent = {
 	type: 'version';
+	cliName: string | undefined;
 };
 
 export type CommandsCompositionErrorEvent = {
 	type: 'commandsCompositionErrEvent';
+	cliName: string | undefined;
 	message: string;
 };
 
@@ -60,6 +69,7 @@ export type ValidationViolation =
 
 export type ValidationErrorEvent = {
 	type: 'validationError';
+	cliName: string | undefined;
 	command: Command;
 	option: ProcessedBuilderConfig;
 	offender: {
