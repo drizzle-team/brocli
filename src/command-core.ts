@@ -242,7 +242,7 @@ export const command = <
 
 	if (!command.handler && !command.subcommands) {
 		throw new BroCliError(
-			`Can't define commadn '${cmd.name}' - command without subcommands must have a handler present!`,
+			`Can't define command '${cmd.name}' - command without subcommands must have a handler present!`,
 		);
 	}
 

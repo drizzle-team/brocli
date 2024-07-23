@@ -1168,7 +1168,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['c-sixth', 'c6'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-sixth' - duplicate alias 'c-sixth'!`));
 	});
 
 	it('Duplicate aliases in same command', () => {
@@ -1178,7 +1178,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['c7', 'c7', 'csvn'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-seventh' - duplicate alias 'c7'!`));
 	});
 
 	it('Forbidden character in name', () => {
@@ -1188,7 +1188,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['c8'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command '--c-eigth' - command name can't start with '-'!`));
 	});
 
 	it('Forbidden character in alias', () => {
@@ -1198,7 +1198,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['-c9'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-ninth' - command aliases can't start with '-'!`));
 	});
 
 	it('Forbidden name - true', () => {
@@ -1207,7 +1207,7 @@ describe('Command definition tests', (it) => {
 				name: 'tRue',
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'tRue' - 'tRue' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden name - false', () => {
@@ -1216,7 +1216,7 @@ describe('Command definition tests', (it) => {
 				name: 'FALSE',
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'FALSE' - 'FALSE' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden name - 1', () => {
@@ -1225,7 +1225,7 @@ describe('Command definition tests', (it) => {
 				name: '1',
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command '1' - '1' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden name - 0', () => {
@@ -1234,7 +1234,7 @@ describe('Command definition tests', (it) => {
 				name: '0',
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command '0' - '0' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden alias - true', () => {
@@ -1244,7 +1244,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['trUe'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-ninth' - 'trUe' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden alias - false', () => {
@@ -1254,7 +1254,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['FalSe'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-ninth' - 'FalSe' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden alias - 1', () => {
@@ -1264,7 +1264,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['1'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-ninth' - '1' is a reserved for boolean values name!`));
 	});
 
 	it('Forbidden alias - 0', () => {
@@ -1274,7 +1274,7 @@ describe('Command definition tests', (it) => {
 				aliases: ['0'],
 				handler: () => '',
 			})
-		).toThrowError();
+		).toThrowError(new BroCliError(`Can't define command 'c-ninth' - '0' is a reserved for boolean values name!`));
 	});
 
 	it('Using handler function', async () => {
@@ -1310,23 +1310,45 @@ describe('Command definition tests', (it) => {
 	});
 
 	it('Optional handler with subcommands', async () => {
+		command({
+			name: 'nohandler',
+			subcommands: [command({
+				name: 'deep',
+				handler: handlers.deep,
+			})],
+		});
 	});
 
 	it('Error on no handler without subcommands', async () => {
+		expect(() =>
+			command({
+				name: 'nohandler',
+			})
+		).toThrowError(
+			new BroCliError(`Can't define command 'nohandler' - command without subcommands must have a handler present!`),
+		);
 	});
 
-	it('Positionals with subcommands', async () => {
+	it('Error on positionals with subcommands', async () => {
+		expect(() =>
+			command({
+				name: 'nohandler',
+				options: {
+					pos: positional(),
+				},
+				subcommands: [
+					command({
+						name: 'something',
+						handler: () => '',
+					}),
+				],
+			})
+		).toThrowError(
+			new BroCliError(
+				`Can't define command 'nohandler' - command can't have subcommands and positional args at the same time!`,
+			),
+		);
 	});
-});
-
-describe('Config options tests', (it) => {
-	it('Omit undefined keys: true', async () => {});
-
-	it('Omit undefined keys: false', async () => {});
-
-	it('Custom gloabl help is called', async () => {});
-
-	it('Custom version is called', async () => {});
 });
 
 describe('Hook tests', (it) => {
