@@ -1,6 +1,6 @@
 import { type Command, command, getCommandNameWithParents } from './command-core';
-import { defaultTheme } from './help-themes';
 import type { ProcessedBuilderConfig } from './option-builder';
+import { executeOrLog } from './util';
 
 export type CommandHelpEvent = {
 	type: 'commandHelp';
@@ -86,27 +86,72 @@ export type BroCliEvent =
 
 export type BroCliEventType = BroCliEvent['type'];
 
-const executeOrLog = async (target?: string | Function) =>
-	typeof target === 'string' ? console.log(target) : target ? await target() : undefined;
-
 /**
  * Return `true` if your handler processes the event
  *
  * Return `false` to process event with a built-in handler
  */
 export type EventHandler = (event: BroCliEvent) => boolean | Promise<boolean>;
-export const defaultEventHandler: EventHandler = async (event) => {
+export const defaultEventHandler = (
+	globalHelp: Function | string | undefined,
+): EventHandler =>
+async (event) => {
 	switch (event.type) {
 		case 'commandHelp': {
-			if (event.command.help) await executeOrLog(event.command.help);
-			else await defaultTheme(event.command);
+			const options = event.command.options
+				? Object.values(event.command.options).filter((opt) => !opt.config?.isHidden).map(
+					({ config: opt }) => ({
+						name: opt.name,
+						aliases: opt.aliases.length ? `${opt.aliases.join(', ')}` : '-',
+						description: opt.description ?? '-',
+						type: opt.type,
+						required: opt.isRequired ? '✓' : '✗',
+					}),
+				)
+				: undefined;
+
+			console.log(
+				`Command: ${event.command.name}${event.command.aliases ? ` [${event.command.aliases.join(', ')}]` : ''}${
+					event.command.desc ? ` - ${event.command.desc}` : ''
+				}`,
+			);
+
+			if (!options?.length) return true;
+
+			console.log('\nOptions:');
+			console.table(options);
+
+			// Return this decision back to invoking code
+			// if (event.command.help) await executeOrLog(event.command.help);
+			// else await defaultTheme(event.command);
 
 			return true;
 		}
 
 		case 'globalHelp': {
-			if (event.help !== undefined) await executeOrLog(event.help);
-			else await defaultTheme(event.commands);
+			if (globalHelp !== undefined) {
+				await executeOrLog(globalHelp);
+
+				return true;
+			}
+
+			const cmds = event.commands.filter((cmd) => !cmd.hidden);
+
+			const tableCmds = cmds.map((cmd) => ({
+				name: cmd.name,
+				aliases: cmd.aliases ? cmd.aliases.join(', ') : '-',
+				description: cmd.desc ?? '-',
+			}));
+
+			console.log(`Here's the list of all available commands:`);
+			console.table(tableCmds);
+			console.log(
+				'To read the details about any particular command type: [commandName] --help',
+			);
+
+			// Return this decision back to invoking code
+			// if (event.help !== undefined) await executeOrLog(event.help);
+			// else await defaultTheme(event.commands);
 
 			return true;
 		}
@@ -128,7 +173,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'unknownSubcommandEvent': {
@@ -137,7 +182,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'missingArgsErr': {
@@ -156,7 +201,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'unrecognizedArgsErr': {
@@ -165,7 +210,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'validationError': {
@@ -240,20 +285,20 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			console.error(msg);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'unknownError': {
 			const e = event.error;
 			console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
 
-			process.exit(1);
+			return true;
 		}
 
 		case 'commandsCompositionErrEvent': {
 			console.error(event.message);
 
-			process.exit(1);
+			return true;
 		}
 	}
 
@@ -261,5 +306,6 @@ export const defaultEventHandler: EventHandler = async (event) => {
 	return false;
 };
 
-export const eventHandlerWrapper = (customEventHandler: EventHandler) => async (event: BroCliEvent) =>
-	await customEventHandler(event) ? true : await defaultEventHandler(event);
+export const eventHandlerWrapper =
+	(customEventHandler: EventHandler, globalHelp: Function | string | undefined) => async (event: BroCliEvent) =>
+		await customEventHandler(event) ? true : await defaultEventHandler(globalHelp)(event);

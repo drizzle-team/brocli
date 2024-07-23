@@ -9,7 +9,7 @@ import {
 	type ProcessedOptions,
 	type TypeOf,
 } from './option-builder';
-import { isInt, shellArgs } from './util';
+import { executeOrLog, isInt, shellArgs } from './util';
 
 // Type area
 export type CommandHandler<
@@ -42,7 +42,7 @@ export type BroCliConfig = {
 	version?: string | Function;
 	omitKeysOfUndefinedOptions?: boolean;
 	hook?: (event: EventType, command: Command) => any;
-	eventHandler?: EventHandler;
+	theme?: EventHandler;
 };
 
 export type GenericCommandHandler = (options?: Record<string, OutputType> | undefined) => any;
@@ -728,7 +728,9 @@ const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), 
  * @param config - additional settings
  */
 export const run = async (commands: Command[], config?: BroCliConfig) => {
-	const eventHandler = config?.eventHandler ? eventHandlerWrapper(config.eventHandler) : defaultEventHandler;
+	const eventHandler = config?.theme
+		? eventHandlerWrapper(config.theme, config?.help)
+		: defaultEventHandler(config?.help);
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
 	const help = config?.help;
@@ -755,9 +757,9 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			const command = getCommand(processedCmds, args).command;
 
 			if (typeof command === 'object') {
-				return await eventHandler({
+				return command.help !== undefined ? await executeOrLog(command.help) : await eventHandler({
 					type: 'commandHelp',
-					command,
+					command: command,
 				});
 			} else {
 				return await eventHandler({
@@ -797,7 +799,7 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			} while (helpCommand === 'help');
 
 			return helpCommand
-				? await eventHandler({
+				? helpCommand.help !== undefined ? await executeOrLog(helpCommand.help) : await eventHandler({
 					type: 'commandHelp',
 					command: helpCommand,
 				})
@@ -811,9 +813,9 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 		const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
 
 		if (optionResult === 'help') {
-			return await eventHandler({
+			return command.help !== undefined ? await executeOrLog(command.help) : await eventHandler({
 				type: 'commandHelp',
-				command,
+				command: command,
 			});
 		}
 		if (optionResult === 'version') {
@@ -827,11 +829,11 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			if (config?.hook) await config.hook('before', command);
 			await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
 			if (config?.hook) await config.hook('after', command);
-			return undefined;
+			return;
 		} else {
-			return await eventHandler({
+			return command.help !== undefined ? await executeOrLog(command.help) : await eventHandler({
 				type: 'commandHelp',
-				command,
+				command: command,
 			});
 		}
 	} catch (e) {
@@ -849,6 +851,9 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 				error: e,
 			});
 		}
+
+		// @ts-expect-error - option meant only for tests
+		if (!config?.noExit) process.exit(1);
 
 		return;
 	}

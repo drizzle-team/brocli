@@ -37,7 +37,7 @@ const hookMocks: Record<EventType, Mock<any, any>> = {
 	after: vi.fn(),
 };
 
-const testEventHandler: EventHandler = (event) => {
+const testTheme: EventHandler = (event) => {
 	eventMocks[event.type](event);
 
 	return true;
@@ -140,7 +140,12 @@ commands.push(cSecond);
 
 describe('Parsing tests', (it) => {
 	it('Required options & defaults', async () => {
-		await run(commands, { argSource: getArgs('generate --dialect=pg'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
 			dialect: 'pg',
@@ -168,7 +173,9 @@ describe('Parsing tests', (it) => {
 				argSource: getArgs(
 					'generate --dialect pg --schema=./schemapath.ts --out=./outfile.ts --name="Example migration" --breakpoints=breakpoints --custom="custom value" --flag --defFlag false --dbg=true --num 5.5 --int=2 posval second',
 				),
-				eventHandler: testEventHandler,
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
 			},
 		);
 
@@ -198,7 +205,9 @@ describe('Parsing tests', (it) => {
 				argSource: getArgs(
 					'generate -dlc pg -s=./schemapath.ts -o=./outfile.ts -n="Example migration" --break=breakpoints --cus="custom value" -f -def false -ds=Not=Default=Value -g=true -nb=5.5 -i=2 posval second',
 				),
-				eventHandler: testEventHandler,
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
 			},
 		);
 
@@ -222,7 +231,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Missing required options', async () => {
-		await run(commands, { argSource: getArgs('generate'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('generate'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.missingArgsErr.mock.lastCall).toStrictEqual([{
 			type: 'missingArgsErr',
@@ -234,7 +248,9 @@ describe('Parsing tests', (it) => {
 	it('Unrecognized options', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg --unknown-one -m'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.unrecognizedArgsErr.mock.lastCall).toStrictEqual([{
@@ -247,7 +263,9 @@ describe('Parsing tests', (it) => {
 	it('Wrong type: string to boolean', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg -def=somevalue'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
@@ -263,7 +281,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Wrong type: boolean to string', async () => {
-		await run(commands, { argSource: getArgs('generate --dialect=pg -ds'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -ds'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
@@ -278,7 +301,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Wrong type: string to number', async () => {
-		await run(commands, { argSource: getArgs('generate --dialect=pg -nb string'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -nb string'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
@@ -293,7 +321,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Enum violation', async () => {
-		await run(commands, { argSource: getArgs('generate --dialect=wrong'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('generate --dialect=wrong'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
 			type: 'validationError',
@@ -310,7 +343,9 @@ describe('Parsing tests', (it) => {
 	it('Positional enum violation', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg someval wrongval'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
@@ -327,7 +362,9 @@ describe('Parsing tests', (it) => {
 	it('Min value violation', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg -nb -20'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
@@ -345,7 +382,9 @@ describe('Parsing tests', (it) => {
 	it('Max value violation', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg -nb 20'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
@@ -363,7 +402,9 @@ describe('Parsing tests', (it) => {
 	it('Int violation', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg -i 20.5'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
@@ -381,7 +422,9 @@ describe('Parsing tests', (it) => {
 	it('Positional in order', async () => {
 		await run(commands, {
 			argSource: getArgs('generate posval --dialect=pg'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -406,7 +449,9 @@ describe('Parsing tests', (it) => {
 	it('Positional after flag', async () => {
 		await run(commands, {
 			argSource: getArgs('generate -f true posval --dialect=pg'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -431,7 +476,9 @@ describe('Parsing tests', (it) => {
 	it('Positional after flag set by "="', async () => {
 		await run(commands, {
 			argSource: getArgs('generate -f=true posval --dialect=pg'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -456,7 +503,9 @@ describe('Parsing tests', (it) => {
 	it('Positional after valueless flag', async () => {
 		await run(commands, {
 			argSource: getArgs('generate -f posval --dialect=pg'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -481,7 +530,9 @@ describe('Parsing tests', (it) => {
 	it('Positional after string', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect pg posval'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -506,7 +557,9 @@ describe('Parsing tests', (it) => {
 	it('Positional after string set by "="', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg posval'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.generate.mock.lastCall).toStrictEqual([{
@@ -529,7 +582,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right command, no args', async () => {
-		await run(commands, { argSource: getArgs('c-first'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.cFirst.mock.lastCall).toStrictEqual([{
 			flag: undefined,
@@ -555,7 +613,9 @@ describe('Parsing tests', (it) => {
 	it('Get the right command, command between args', async () => {
 		await run(commands, {
 			argSource: getArgs('--flag --string=strval c-second --stealth --sstring="Hidden string"'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
@@ -569,7 +629,9 @@ describe('Parsing tests', (it) => {
 	it('Get the right command, command after args', async () => {
 		await run(commands, {
 			argSource: getArgs('--flag --string=strval --stealth --sstring="Hidden string" c-second'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(handlers.cSecond.mock.lastCall).toStrictEqual([{
@@ -581,7 +643,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Unknown command', async () => {
-		await run(commands, { argSource: getArgs('unknown --somearg=somevalue -f'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('unknown --somearg=somevalue -f'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.unknownCommandEvent.mock.lastCall).toStrictEqual([{
 			type: 'unknownCommandEvent',
@@ -590,7 +657,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right command, no args', async () => {
-		await run(commands, { argSource: getArgs('c-first'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.cFirst.mock.lastCall).toStrictEqual([{
 			flag: undefined,
@@ -601,7 +673,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right subcommand, subcommand before args', async () => {
-		await run(commands, { argSource: getArgs('c-first sub -f posval -s=str '), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first sub -f posval -s=str '),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.sub.mock.lastCall).toStrictEqual([{
 			flag: true,
@@ -611,7 +688,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right subcommand, subcommand between args', async () => {
-		await run(commands, { argSource: getArgs('c-first -f true sub posval2 -s=str '), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first -f true sub posval2 -s=str '),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.sub.mock.lastCall).toStrictEqual([{
 			flag: true,
@@ -621,7 +703,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right subcommand, subcommand after args', async () => {
-		await run(commands, { argSource: getArgs('c-first -f posval3 -s=str sub'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first -f posval3 -s=str sub'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.sub.mock.lastCall).toStrictEqual([{
 			flag: true,
@@ -631,13 +718,23 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right deep subcommand', async () => {
-		await run(commands, { argSource: getArgs('c-first nohandler deep'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first nohandler deep'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.deep.mock.lastCall).toStrictEqual([undefined]);
 	});
 
 	it('Positionals in subcommand', async () => {
-		await run(commands, { argSource: getArgs('c-first -f posval3 -s=str sub'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first -f posval3 -s=str sub'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(handlers.sub.mock.lastCall).toStrictEqual([{
 			flag: true,
@@ -647,7 +744,12 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Unknown subcommand', async () => {
-		await run(commands, { argSource: getArgs('c-first unrecognized'), eventHandler: testEventHandler });
+		await run(commands, {
+			argSource: getArgs('c-first unrecognized'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(eventMocks.unknownSubcommandEvent.mock.lastCall).toStrictEqual([{
 			type: 'unknownSubcommandEvent',
@@ -671,7 +773,12 @@ describe('Parsing tests', (it) => {
 			handler: handlerFn,
 		});
 
-		await run([cmd], { argSource: getArgs('generate --dialect=pg'), eventHandler: testEventHandler });
+		await run([cmd], {
+			argSource: getArgs('generate --dialect=pg'),
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
+		});
 
 		expect(transformFn.mock.lastCall).toStrictEqual([{
 			dialect: 'pg',
@@ -697,7 +804,7 @@ describe('Parsing tests', (it) => {
 	it('Omit undefined keys', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --dialect=pg'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			omitKeysOfUndefinedOptions: true,
 		});
 
@@ -712,7 +819,7 @@ describe('Parsing tests', (it) => {
 	it('Global --help', async () => {
 		await run(commands, {
 			argSource: getArgs('--help'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			help: 'help1',
 		});
 
@@ -727,7 +834,7 @@ describe('Parsing tests', (it) => {
 	it('Global -h', async () => {
 		await run(commands, {
 			argSource: getArgs('--someothergarbage=there -h --somegarbage here'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			help: 'help2',
 		});
 
@@ -742,7 +849,9 @@ describe('Parsing tests', (it) => {
 	it('Command --help', async () => {
 		await run(commands, {
 			argSource: getArgs('generate --help'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(1);
@@ -755,7 +864,9 @@ describe('Parsing tests', (it) => {
 	it('Subcommand --help', async () => {
 		await run(commands, {
 			argSource: getArgs('c-first sub --help'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(2);
@@ -768,7 +879,9 @@ describe('Parsing tests', (it) => {
 	it('Command --help, off position', async () => {
 		await run(commands, {
 			argSource: getArgs('generate sometrash --flag --help sometrash '),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(3);
@@ -781,7 +894,9 @@ describe('Parsing tests', (it) => {
 	it('Command -h', async () => {
 		await run(commands, {
 			argSource: getArgs('generate -h'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(4);
@@ -794,7 +909,9 @@ describe('Parsing tests', (it) => {
 	it('Command -h, off position', async () => {
 		await run(commands, {
 			argSource: getArgs('generate sometrash --flag -h sometrash '),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(5);
@@ -807,7 +924,7 @@ describe('Parsing tests', (it) => {
 	it('Global help', async () => {
 		await run(commands, {
 			argSource: getArgs('help'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			help: 'dashless1',
 		});
 
@@ -822,7 +939,9 @@ describe('Parsing tests', (it) => {
 	it('Command help', async () => {
 		await run(commands, {
 			argSource: getArgs('help generate'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(6);
@@ -835,7 +954,9 @@ describe('Parsing tests', (it) => {
 	it('Subcommand help', async () => {
 		await run(commands, {
 			argSource: getArgs('help c-first sub'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(7);
@@ -848,7 +969,9 @@ describe('Parsing tests', (it) => {
 	it('Handlerless subcommand help', async () => {
 		await run(commands, {
 			argSource: getArgs('help c-first nohandler'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(8);
@@ -861,7 +984,7 @@ describe('Parsing tests', (it) => {
 	it('--version', async () => {
 		await run(commands, {
 			argSource: getArgs('--version'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			version: 'test',
 		});
 
@@ -875,7 +998,7 @@ describe('Parsing tests', (it) => {
 	it('-v', async () => {
 		await run(commands, {
 			argSource: getArgs('-v'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			version: 'test2.0',
 		});
 
@@ -1093,7 +1216,9 @@ describe('Command definition tests', (it) => {
 		});
 
 		await run([...commands, cmd], {
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
@@ -1110,7 +1235,9 @@ describe('Command definition tests', (it) => {
 		});
 
 		await run([...commands, cmd], {
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
@@ -1127,7 +1254,9 @@ describe('Command definition tests', (it) => {
 		});
 
 		await run([...commands, cmd], {
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
@@ -1144,7 +1273,9 @@ describe('Command definition tests', (it) => {
 		});
 
 		await run([...commands, cmd], {
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
@@ -1291,7 +1422,9 @@ describe('Command definition tests', (it) => {
 
 		await run([cmd], {
 			argSource: getArgs('c-tenth -f -j false --string=strval'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(localFn.mock.lastCall).toStrictEqual([{
@@ -1359,7 +1492,7 @@ describe('Hook tests', (it) => {
 	it('Execution in order', async () => {
 		await run(cmdsLocal, {
 			argSource: getArgs('test'),
-			eventHandler: testEventHandler,
+			theme: testTheme,
 			hook: async (event, command) => {
 				const stamp = new Date();
 				if (event === 'before') {
