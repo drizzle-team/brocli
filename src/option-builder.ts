@@ -233,12 +233,14 @@ export class OptionBuilderBase<
 		return new OptionBuilderBase({ ...config, default: value }) as any;
 	}
 
-	public enum<TValues extends [string, ...string[]]>(...values: TValues): Omit<
+	public enum<TValues extends [string, ...string[]], TUnion extends TValues[number] = TValues[number]>(
+		...values: TValues
+	): Omit<
 		OptionBuilderBase<
 			TBuilderConfig,
-			TValues[number],
+			TUnion | (TOutput extends undefined ? undefined : never),
 			TOmit | 'enum',
-			TValues[number]
+			TUnion
 		>,
 		TOmit | 'enum'
 	> {

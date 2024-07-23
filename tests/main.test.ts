@@ -1623,7 +1623,8 @@ describe('Test function string to args convertion tests', (it) => {
 
 describe('Type tests', (it) => {
 	const generateOps = {
-		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').required(),
+		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').enum('pg', 'mysql', 'sqlite')
+			.required(),
 		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
 		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
 		name: string().alias('n').desc('Migration file name'),
@@ -1639,13 +1640,14 @@ describe('Type tests', (it) => {
 		num: number('num'),
 		pos: positional(),
 		int: number('num').int(),
+		enpos: positional('Enum positional').enum('first', 'second', 'third'),
 	};
 
 	it('Param type inferrence test', () => {
 		type GenerateOptions = TypeOf<typeof generateOps>;
 
 		type ExpectedType = {
-			dialect: string;
+			dialect: 'pg' | 'mysql' | 'sqlite';
 			schema: string | undefined;
 			out: string | undefined;
 			name: string | undefined;
@@ -1659,6 +1661,7 @@ describe('Type tests', (it) => {
 			num: number | undefined;
 			pos: string | undefined;
 			int: number | undefined;
+			enpos: 'first' | 'second' | 'third' | undefined;
 		};
 
 		expectTypeOf<GenerateOptions>().toEqualTypeOf<ExpectedType>();
@@ -1670,7 +1673,7 @@ describe('Type tests', (it) => {
 		type HandlerOpts = typeof hdl extends (options: infer Options) => any ? Options : never;
 
 		type ExpectedType = {
-			dialect: string;
+			dialect: 'pg' | 'mysql' | 'sqlite';
 			schema: string | undefined;
 			out: string | undefined;
 			name: string | undefined;
@@ -1684,6 +1687,7 @@ describe('Type tests', (it) => {
 			num: number | undefined;
 			pos: string | undefined;
 			int: number | undefined;
+			enpos: 'first' | 'second' | 'third' | undefined;
 		};
 
 		expectTypeOf<HandlerOpts>().toEqualTypeOf<ExpectedType>();
