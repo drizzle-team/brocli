@@ -314,45 +314,226 @@ describe('Parsing tests', (it) => {
 		}] as BroCliEvent[]);
 	});
 
-	it('Positional enum violation', async () => {});
+	it('Positional enum violation', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg someval wrongval'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Min value violation', async () => {});
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Enum violation',
+			command: generate,
+			option: generate.options!['enpos']!.config,
+			offender: {
+				dataPart: 'wrongval',
+			},
+		}] as BroCliEvent[]);
+	});
 
-	it('Max value violation', async () => {});
+	it('Min value violation', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -nb -20'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Int violation', async () => {});
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Below min',
+			command: generate,
+			option: generate.options!['num']!.config,
+			offender: {
+				namePart: '-nb',
+				dataPart: '-20',
+			},
+		}] as BroCliEvent[]);
+	});
 
-	it('Positional in order', async () => {});
+	it('Max value violation', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -nb 20'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Positional after flag', async () => {});
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Above max',
+			command: generate,
+			option: generate.options!['num']!.config,
+			offender: {
+				namePart: '-nb',
+				dataPart: '20',
+			},
+		}] as BroCliEvent[]);
+	});
 
-	it('Positional after flag set by "="', async () => {});
+	it('Int violation', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg -i 20.5'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Positional after valueless flag', async () => {});
+		expect(eventMocks.validationError.mock.lastCall).toStrictEqual([{
+			type: 'validationError',
+			violation: 'Expected int',
+			command: generate,
+			option: generate.options!['int']!.config,
+			offender: {
+				namePart: '-i',
+				dataPart: '20.5',
+			},
+		}] as BroCliEvent[]);
+	});
 
-	it('Positional after string', async () => {});
+	it('Positional in order', async () => {
+		await run(commands, {
+			argSource: getArgs('generate posval --dialect=pg'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Positional after string set by "="', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: undefined,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
-	it('Transform', async () => {});
+	it('Positional after flag', async () => {
+		await run(commands, {
+			argSource: getArgs('generate -f true posval --dialect=pg'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Omit undefined keys', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: true,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
-	it('Global --help', async () => {});
+	it('Positional after flag set by "="', async () => {
+		await run(commands, {
+			argSource: getArgs('generate -f=true posval --dialect=pg'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Global -h', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: true,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
-	it('Command --help', async () => {});
+	it('Positional after valueless flag', async () => {
+		await run(commands, {
+			argSource: getArgs('generate -f posval --dialect=pg'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Command --help, off position', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: true,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
-	it('Command -h', async () => {});
+	it('Positional after string', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect pg posval'),
+			eventHandler: testEventHandler,
+		});
 
-	it('Command -h, off position', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: undefined,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
-	it('--version', async () => {});
+	it('Positional after string set by "="', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg posval'),
+			eventHandler: testEventHandler,
+		});
 
-	it('-v', async () => {});
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: undefined,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: 'posval',
+			enpos: undefined,
+		}]);
+	});
 
 	it('Get the right command, no args', async () => {
 		await run(commands, { argSource: getArgs('c-first'), eventHandler: testEventHandler });
@@ -427,23 +608,290 @@ describe('Parsing tests', (it) => {
 	});
 
 	it('Get the right subcommand, subcommand before args', async () => {
+		await run(commands, { argSource: getArgs('c-first sub -f posval -s=str '), eventHandler: testEventHandler });
+
+		expect(handlers.sub.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'str',
+			pos: 'posval',
+		}]);
 	});
 
 	it('Get the right subcommand, subcommand between args', async () => {
+		await run(commands, { argSource: getArgs('c-first -f true sub posval2 -s=str '), eventHandler: testEventHandler });
+
+		expect(handlers.sub.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'str',
+			pos: 'posval2',
+		}]);
 	});
 
 	it('Get the right subcommand, subcommand after args', async () => {
+		await run(commands, { argSource: getArgs('c-first -f posval3 -s=str sub'), eventHandler: testEventHandler });
+
+		expect(handlers.sub.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'str',
+			pos: 'posval3',
+		}]);
 	});
 
-	it('Positionals in subcommand', async () => {});
+	it('Get the right deep subcommand', async () => {
+		await run(commands, { argSource: getArgs('c-first nohandler deep'), eventHandler: testEventHandler });
 
-	it('Unknown subcommand', async () => {});
+		expect(handlers.deep.mock.lastCall).toStrictEqual([undefined]);
+	});
 
-	it('Global help', async () => {});
+	it('Positionals in subcommand', async () => {
+		await run(commands, { argSource: getArgs('c-first -f posval3 -s=str sub'), eventHandler: testEventHandler });
 
-	it('Command help', async () => {});
+		expect(handlers.sub.mock.lastCall).toStrictEqual([{
+			flag: true,
+			string: 'str',
+			pos: 'posval3',
+		}]);
+	});
 
-	it('Subcommand help', async () => {});
+	it('Unknown subcommand', async () => {
+		await run(commands, { argSource: getArgs('c-first unrecognized'), eventHandler: testEventHandler });
+
+		expect(eventMocks.unknownSubcommandEvent.mock.lastCall).toStrictEqual([{
+			type: 'unknownSubcommandEvent',
+			offender: 'unrecognized',
+			command: cFirst,
+		}] as BroCliEvent[]);
+	});
+
+	it('Transform', async () => {
+		const transformFn = vi.fn();
+		const handlerFn = vi.fn();
+
+		const cmd = command({
+			name: 'generate',
+			options: generateOps,
+			transform: async (opts) => {
+				transformFn(opts);
+
+				return 'transformed';
+			},
+			handler: handlerFn,
+		});
+
+		await run([cmd], { argSource: getArgs('generate --dialect=pg'), eventHandler: testEventHandler });
+
+		expect(transformFn.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			schema: undefined,
+			out: undefined,
+			name: undefined,
+			breakpoints: undefined,
+			custom: undefined,
+			config: './drizzle-kit.config.ts',
+			flag: undefined,
+			defFlag: true,
+			defString: 'Defaultvalue',
+			debug: undefined,
+			num: undefined,
+			int: undefined,
+			pos: undefined,
+			enpos: undefined,
+		}]);
+
+		expect(handlerFn.mock.lastCall).toStrictEqual(['transformed']);
+	});
+
+	it('Omit undefined keys', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --dialect=pg'),
+			eventHandler: testEventHandler,
+			omitKeysOfUndefinedOptions: true,
+		});
+
+		expect(handlers.generate.mock.lastCall).toStrictEqual([{
+			dialect: 'pg',
+			config: './drizzle-kit.config.ts',
+			defFlag: true,
+			defString: 'Defaultvalue',
+		}]);
+	});
+
+	it('Global --help', async () => {
+		await run(commands, {
+			argSource: getArgs('--help'),
+			eventHandler: testEventHandler,
+			help: 'help1',
+		});
+
+		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(1);
+		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
+			type: 'globalHelp',
+			commands: commands,
+			help: 'help1',
+		}] as BroCliEvent[]);
+	});
+
+	it('Global -h', async () => {
+		await run(commands, {
+			argSource: getArgs('--someothergarbage=there -h --somegarbage here'),
+			eventHandler: testEventHandler,
+			help: 'help2',
+		});
+
+		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(2);
+		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
+			type: 'globalHelp',
+			commands: commands,
+			help: 'help2',
+		}] as BroCliEvent[]);
+	});
+
+	it('Command --help', async () => {
+		await run(commands, {
+			argSource: getArgs('generate --help'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(1);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: generate,
+		}] as BroCliEvent[]);
+	});
+
+	it('Subcommand --help', async () => {
+		await run(commands, {
+			argSource: getArgs('c-first sub --help'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(2);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: cFirst.subcommands![0],
+		}] as BroCliEvent[]);
+	});
+
+	it('Command --help, off position', async () => {
+		await run(commands, {
+			argSource: getArgs('generate sometrash --flag --help sometrash '),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(3);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: generate,
+		}] as BroCliEvent[]);
+	});
+
+	it('Command -h', async () => {
+		await run(commands, {
+			argSource: getArgs('generate -h'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(4);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: generate,
+		}] as BroCliEvent[]);
+	});
+
+	it('Command -h, off position', async () => {
+		await run(commands, {
+			argSource: getArgs('generate sometrash --flag -h sometrash '),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(5);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: generate,
+		}] as BroCliEvent[]);
+	});
+
+	it('Global help', async () => {
+		await run(commands, {
+			argSource: getArgs('help'),
+			eventHandler: testEventHandler,
+			help: 'dashless1',
+		});
+
+		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(3);
+		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
+			type: 'globalHelp',
+			commands: commands,
+			help: 'dashless1',
+		}] as BroCliEvent[]);
+	});
+
+	it('Command help', async () => {
+		await run(commands, {
+			argSource: getArgs('help generate'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(6);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: generate,
+		}] as BroCliEvent[]);
+	});
+
+	it('Subcommand help', async () => {
+		await run(commands, {
+			argSource: getArgs('help c-first sub'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(7);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: cFirst.subcommands![0]!,
+		}] as BroCliEvent[]);
+	});
+
+	it('Handlerless subcommand help', async () => {
+		await run(commands, {
+			argSource: getArgs('help c-first nohandler'),
+			eventHandler: testEventHandler,
+		});
+
+		expect(eventMocks.commandHelp.mock.calls.length).toStrictEqual(8);
+		expect(eventMocks.commandHelp.mock.lastCall).toStrictEqual([{
+			type: 'commandHelp',
+			command: cFirst.subcommands![1]!,
+		}] as BroCliEvent[]);
+	});
+
+	it('--version', async () => {
+		await run(commands, {
+			argSource: getArgs('--version'),
+			eventHandler: testEventHandler,
+			version: 'test',
+		});
+
+		expect(eventMocks.version.mock.calls.length).toStrictEqual(1);
+		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
+			type: 'version',
+			version: 'test',
+		}] as BroCliEvent[]);
+	});
+
+	it('-v', async () => {
+		await run(commands, {
+			argSource: getArgs('-v'),
+			eventHandler: testEventHandler,
+			version: 'test2.0',
+		});
+
+		expect(eventMocks.version.mock.calls.length).toStrictEqual(2);
+		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
+			type: 'version',
+			version: 'test2.0',
+		}] as BroCliEvent[]);
+	});
 });
 
 describe('Option definition tests', (it) => {
