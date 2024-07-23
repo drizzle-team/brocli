@@ -1352,11 +1352,44 @@ describe('Command definition tests', (it) => {
 });
 
 describe('Hook tests', (it) => {
-	it('Before', async () => {});
+	let [before, handler, after] = [new Date(), new Date(), new Date()];
 
-	it('After', async () => {});
+	const test = command({
+		name: 'test',
+		handler: () => handler = new Date(),
+	});
 
-	it('Before & after', async () => {});
+	const cmdsLocal = [
+		test,
+	];
+
+	it('Execution in order', async () => {
+		await run(cmdsLocal, {
+			argSource: getArgs('test'),
+			eventHandler: testEventHandler,
+			hook: async (event, command) => {
+				const stamp = new Date();
+				if (event === 'before') {
+					before = stamp;
+					hookMocks.before(stamp, command);
+				}
+				if (event === 'after') {
+					after = stamp;
+					hookMocks.after(stamp, command);
+				}
+			},
+		});
+
+		expect(before.getTime() <= handler.getTime() && handler.getTime() <= after.getTime()).toStrictEqual(true);
+		expect(hookMocks.before.mock.lastCall).toStrictEqual([
+			before,
+			test,
+		]);
+		expect(hookMocks.after.mock.lastCall).toStrictEqual([
+			after,
+			test,
+		]);
+	});
 });
 
 describe('Default event handler correct behaviour tests', (it) => {
