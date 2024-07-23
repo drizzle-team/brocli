@@ -37,14 +37,7 @@ const hookMocks: Record<EventType, Mock<any, any>> = {
 	after: vi.fn(),
 };
 
-const hook = async (event: EventType, command: Command) => {
-	if (event === 'before') await hookMocks.before(command);
-	if (event === 'after') await hookMocks.after(command);
-};
-
 const testEventHandler: EventHandler = (event) => {
-	console.warn(event);
-
 	eventMocks[event.type](event);
 
 	return true;
@@ -1393,21 +1386,65 @@ describe('Hook tests', (it) => {
 });
 
 describe('Default event handler correct behaviour tests', (it) => {
-	it('Global --help', async () => {});
+	const ghelp = vi.fn();
+	const chelp = vi.fn();
+	const ver = vi.fn();
 
-	it('Global -h', async () => {});
+	const cmd = command({
+		name: 'test',
+		handler: () => '',
+		help: chelp,
+	});
 
-	it('Command --help', async () => {});
+	const cmds = [cmd];
 
-	it('Command -h', async () => {});
+	it('Global --help', async () => {
+		await run(cmds, { argSource: getArgs('--help'), help: ghelp });
 
-	it('Global help', async () => {});
+		expect(ghelp.mock.calls.length).toStrictEqual(1);
+	});
 
-	it('Command help', async () => {});
+	it('Global -h', async () => {
+		await run(cmds, { argSource: getArgs('-h'), help: ghelp });
 
-	it('--version', async () => {});
+		expect(ghelp.mock.calls.length).toStrictEqual(2);
+	});
 
-	it('-v', async () => {});
+	it('Command --help', async () => {
+		await run(cmds, { argSource: getArgs('test --help') });
+
+		expect(chelp.mock.calls.length).toStrictEqual(1);
+	});
+
+	it('Command -h', async () => {
+		await run(cmds, { argSource: getArgs('test -h') });
+
+		expect(chelp.mock.calls.length).toStrictEqual(2);
+	});
+
+	it('Global help', async () => {
+		await run(cmds, { argSource: getArgs('help'), help: ghelp });
+
+		expect(ghelp.mock.calls.length).toStrictEqual(3);
+	});
+
+	it('Command help', async () => {
+		await run(cmds, { argSource: getArgs('help test'), help: ghelp });
+
+		expect(chelp.mock.calls.length).toStrictEqual(3);
+	});
+
+	it('--version', async () => {
+		await run(cmds, { argSource: getArgs('--version'), version: ver });
+
+		expect(ver.mock.calls.length).toStrictEqual(1);
+	});
+
+	it('-v', async () => {
+		await run(cmds, { argSource: getArgs('-v'), version: ver });
+
+		expect(ver.mock.calls.length).toStrictEqual(2);
+	});
 });
 
 describe('Test function string to args convertion tests', (it) => {

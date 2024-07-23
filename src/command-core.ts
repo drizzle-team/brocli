@@ -746,8 +746,6 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			});
 		}
 
-		// console.log(args);
-
 		const helpIndex = args.findIndex((arg) => arg === '--help' || arg === '-h');
 		if (
 			helpIndex !== -1 && (helpIndex > 0
@@ -780,8 +778,6 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 
 		const { command, args: newArgs } = getCommand(processedCmds, args);
 
-		// console.log((<any> command).name, newArgs);
-
 		if (!command) {
 			return await eventHandler({
 				type: 'globalHelp',
@@ -813,8 +809,6 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 		}
 
 		const optionResult = parseOptions(command, newArgs, omitKeysOfUndefinedOptions);
-
-		// console.log('Option result:', optionResult);
 
 		if (optionResult === 'help') {
 			return await eventHandler({
