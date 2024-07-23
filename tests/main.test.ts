@@ -820,14 +820,14 @@ describe('Parsing tests', (it) => {
 		await run(commands, {
 			argSource: getArgs('--help'),
 			theme: testTheme,
-			help: 'help1',
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
 			commands: commands,
-			help: 'help1',
 		}] as BroCliEvent[]);
 	});
 
@@ -835,14 +835,14 @@ describe('Parsing tests', (it) => {
 		await run(commands, {
 			argSource: getArgs('--someothergarbage=there -h --somegarbage here'),
 			theme: testTheme,
-			help: 'help2',
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
 			commands: commands,
-			help: 'help2',
 		}] as BroCliEvent[]);
 	});
 
@@ -925,14 +925,14 @@ describe('Parsing tests', (it) => {
 		await run(commands, {
 			argSource: getArgs('help'),
 			theme: testTheme,
-			help: 'dashless1',
+			// @ts-expect-error
+			noExit: true,
 		});
 
 		expect(eventMocks.globalHelp.mock.calls.length).toStrictEqual(3);
 		expect(eventMocks.globalHelp.mock.lastCall).toStrictEqual([{
 			type: 'globalHelp',
 			commands: commands,
-			help: 'dashless1',
 		}] as BroCliEvent[]);
 	});
 
@@ -985,13 +985,11 @@ describe('Parsing tests', (it) => {
 		await run(commands, {
 			argSource: getArgs('--version'),
 			theme: testTheme,
-			version: 'test',
 		});
 
 		expect(eventMocks.version.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
 			type: 'version',
-			version: 'test',
 		}] as BroCliEvent[]);
 	});
 
@@ -999,13 +997,11 @@ describe('Parsing tests', (it) => {
 		await run(commands, {
 			argSource: getArgs('-v'),
 			theme: testTheme,
-			version: 'test2.0',
 		});
 
 		expect(eventMocks.version.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.version.mock.lastCall).toStrictEqual([{
 			type: 'version',
-			version: 'test2.0',
 		}] as BroCliEvent[]);
 	});
 });
@@ -1518,7 +1514,7 @@ describe('Hook tests', (it) => {
 	});
 });
 
-describe('Default event handler correct behaviour tests', (it) => {
+describe(`Config styles' prevalence over themes test`, (it) => {
 	const ghelp = vi.fn();
 	const chelp = vi.fn();
 	const ver = vi.fn();

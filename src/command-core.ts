@@ -729,8 +729,8 @@ const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), 
  */
 export const run = async (commands: Command[], config?: BroCliConfig) => {
 	const eventHandler = config?.theme
-		? eventHandlerWrapper(config.theme, config?.help)
-		: defaultEventHandler(config?.help);
+		? eventHandlerWrapper(config.theme)
+		: defaultEventHandler;
 	const argSource = config?.argSource ?? process.argv;
 	const version = config?.version;
 	const help = config?.help;
@@ -741,10 +741,9 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 
 		let args = argSource.slice(2, argSource.length);
 		if (!args.length) {
-			return await eventHandler({
+			return help !== undefined ? await executeOrLog(help) : await eventHandler({
 				type: 'globalHelp',
 				commands: processedCmds,
-				help,
 			});
 		}
 
@@ -762,29 +761,26 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 					command: command,
 				});
 			} else {
-				return await eventHandler({
+				return help !== undefined ? await executeOrLog(help) : await eventHandler({
 					type: 'globalHelp',
 					commands: processedCmds,
-					help,
 				});
 			}
 		}
 
 		const versionIndex = args.findIndex((arg) => arg === '--version' || arg === '-v');
 		if (versionIndex !== -1 && (versionIndex > 0 ? args[versionIndex - 1]?.startsWith('-') ? false : true : true)) {
-			return await eventHandler({
+			return version !== undefined ? await executeOrLog(version) : await eventHandler({
 				type: 'version',
-				version,
 			});
 		}
 
 		const { command, args: newArgs } = getCommand(processedCmds, args);
 
 		if (!command) {
-			return await eventHandler({
+			return help !== undefined ? await executeOrLog(help) : await eventHandler({
 				type: 'globalHelp',
 				commands: processedCmds,
-				help,
 			});
 		}
 
@@ -803,10 +799,11 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 					type: 'commandHelp',
 					command: helpCommand,
 				})
+				: help !== undefined
+				? await executeOrLog(help)
 				: await eventHandler({
 					type: 'globalHelp',
 					commands: processedCmds,
-					help,
 				});
 		}
 
@@ -819,9 +816,8 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 			});
 		}
 		if (optionResult === 'version') {
-			return await eventHandler({
+			return version !== undefined ? await executeOrLog(version) : await eventHandler({
 				type: 'version',
-				version,
 			});
 		}
 

@@ -1,6 +1,5 @@
 import { type Command, command, getCommandNameWithParents } from './command-core';
 import type { ProcessedBuilderConfig } from './option-builder';
-import { executeOrLog } from './util';
 
 export type CommandHelpEvent = {
 	type: 'commandHelp';
@@ -9,7 +8,6 @@ export type CommandHelpEvent = {
 
 export type GlobalHelpEvent = {
 	type: 'globalHelp';
-	help?: string | Function;
 	commands: Command[];
 };
 
@@ -43,7 +41,6 @@ export type UnknownErrorEvent = {
 
 export type VersionEvent = {
 	type: 'version';
-	version?: string | Function;
 };
 
 export type CommandsCompositionErrorEvent = {
@@ -92,10 +89,7 @@ export type BroCliEventType = BroCliEvent['type'];
  * Return `false` to process event with a built-in handler
  */
 export type EventHandler = (event: BroCliEvent) => boolean | Promise<boolean>;
-export const defaultEventHandler = (
-	globalHelp: Function | string | undefined,
-): EventHandler =>
-async (event) => {
+export const defaultEventHandler: EventHandler = async (event) => {
 	switch (event.type) {
 		case 'commandHelp': {
 			const options = event.command.options
@@ -121,20 +115,10 @@ async (event) => {
 			console.log('\nOptions:');
 			console.table(options);
 
-			// Return this decision back to invoking code
-			// if (event.command.help) await executeOrLog(event.command.help);
-			// else await defaultTheme(event.command);
-
 			return true;
 		}
 
 		case 'globalHelp': {
-			if (globalHelp !== undefined) {
-				await executeOrLog(globalHelp);
-
-				return true;
-			}
-
 			const cmds = event.commands.filter((cmd) => !cmd.hidden);
 
 			const tableCmds = cmds.map((cmd) => ({
@@ -149,15 +133,10 @@ async (event) => {
 				'To read the details about any particular command type: [commandName] --help',
 			);
 
-			// Return this decision back to invoking code
-			// if (event.help !== undefined) await executeOrLog(event.help);
-			// else await defaultTheme(event.commands);
-
 			return true;
 		}
 
 		case 'version': {
-			if (event.version !== undefined) await executeOrLog(event.version);
 			try {
 				const jason = await import('package.json');
 				if (typeof jason === 'object' && jason !== null && (<any> jason)['version']) console.log((<any> jason).version);
@@ -306,6 +285,5 @@ async (event) => {
 	return false;
 };
 
-export const eventHandlerWrapper =
-	(customEventHandler: EventHandler, globalHelp: Function | string | undefined) => async (event: BroCliEvent) =>
-		await customEventHandler(event) ? true : await defaultEventHandler(globalHelp)(event);
+export const eventHandlerWrapper = (customEventHandler: EventHandler) => async (event: BroCliEvent) =>
+	await customEventHandler(event) ? true : await defaultEventHandler(event);
