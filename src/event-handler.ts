@@ -51,12 +51,6 @@ export type VersionEvent = {
 	cliName: string | undefined;
 };
 
-export type CommandsCompositionErrorEvent = {
-	type: 'commandsCompositionErrEvent';
-	cliName: string | undefined;
-	message: string;
-};
-
 export type ValidationViolation =
 	| 'Above max'
 	| 'Below min'
@@ -88,8 +82,7 @@ export type BroCliEvent =
 	| UnknownSubcommandEvent
 	| ValidationErrorEvent
 	| VersionEvent
-	| UnknownErrorEvent
-	| CommandsCompositionErrorEvent;
+	| UnknownErrorEvent;
 
 export type BroCliEventType = BroCliEvent['type'];
 
@@ -280,12 +273,6 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		case 'unknownError': {
 			const e = event.error;
 			console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
-
-			return true;
-		}
-
-		case 'commandsCompositionErrEvent': {
-			console.error(event.message);
 
 			return true;
 		}

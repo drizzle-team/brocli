@@ -21,7 +21,6 @@ const getArgs = (str: string) => [process.argv[0]!, process.argv[1]!, ...shellAr
 
 const eventMocks: Record<BroCliEventType, Mock<any, any>> = {
 	commandHelp: vi.fn(),
-	commandsCompositionErrEvent: vi.fn(),
 	globalHelp: vi.fn(),
 	missingArgsErr: vi.fn(),
 	unknownCommandEvent: vi.fn(),
@@ -1236,17 +1235,13 @@ describe('Command definition tests', (it) => {
 			handler: () => '',
 		});
 
-		await run([...commands, cmd], {
-			theme: testTheme,
-			// @ts-expect-error
-			noExit: true,
-		});
-
-		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
-			type: 'commandsCompositionErrEvent',
-			cliName: undefined,
-			message: "BroCli error: Can't define command 'c-first': name is already in use by command 'c-first'!",
-		}] as BroCliEvent[]);
+		expect(
+			await run([...commands, cmd], {
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual("BroCli error: Can't define command 'c-first': name is already in use by command 'c-first'!");
 	});
 
 	it('Duplicate aliases', async () => {
@@ -1256,17 +1251,13 @@ describe('Command definition tests', (it) => {
 			handler: () => '',
 		});
 
-		await run([...commands, cmd], {
-			theme: testTheme,
-			// @ts-expect-error
-			noExit: true,
-		});
-
-		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
-			type: 'commandsCompositionErrEvent',
-			cliName: undefined,
-			message: "BroCli error: Can't define command 'c-third': alias 'g' is already in use by command 'generate'!",
-		}] as BroCliEvent[]);
+		expect(
+			await run([...commands, cmd], {
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual("BroCli error: Can't define command 'c-third': alias 'g' is already in use by command 'generate'!");
 	});
 
 	it('Name repeats alias', async () => {
@@ -1276,17 +1267,13 @@ describe('Command definition tests', (it) => {
 			handler: () => '',
 		});
 
-		await run([...commands, cmd], {
-			theme: testTheme,
-			// @ts-expect-error
-			noExit: true,
-		});
-
-		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
-			type: 'commandsCompositionErrEvent',
-			cliName: undefined,
-			message: "BroCli error: Can't define command 'gen': name is already in use by command 'generate'!",
-		}] as BroCliEvent[]);
+		expect(
+			await run([...commands, cmd], {
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual("BroCli error: Can't define command 'gen': name is already in use by command 'generate'!");
 	});
 
 	it('Alias repeats name', async () => {
@@ -1296,18 +1283,15 @@ describe('Command definition tests', (it) => {
 			handler: () => '',
 		});
 
-		await run([...commands, cmd], {
-			theme: testTheme,
-			// @ts-expect-error
-			noExit: true,
-		});
-
-		expect(eventMocks.commandsCompositionErrEvent.mock.lastCall).toStrictEqual([{
-			type: 'commandsCompositionErrEvent',
-			cliName: undefined,
-			message:
-				"BroCli error: Can't define command 'c-fifth': alias 'generate' is already in use by command 'generate'!",
-		}] as BroCliEvent[]);
+		expect(
+			await run([...commands, cmd], {
+				theme: testTheme,
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual(
+			"BroCli error: Can't define command 'c-fifth': alias 'generate' is already in use by command 'generate'!",
+		);
 	});
 
 	it('Duplicate names in same command', () => {

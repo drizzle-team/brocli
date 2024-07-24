@@ -747,7 +747,7 @@ const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), 
  *
  * @param config - additional settings
  */
-export const run = async (commands: Command[], config?: BroCliConfig) => {
+export const run = async (commands: Command[], config?: BroCliConfig): Promise<void> => {
 	const eventHandler = config?.theme
 		? eventHandlerWrapper(config.theme)
 		: defaultEventHandler;
@@ -867,11 +867,10 @@ export const run = async (commands: Command[], config?: BroCliConfig) => {
 		if (e instanceof BroCliError) {
 			if (e.event) await eventHandler(e.event);
 			else {
-				await eventHandler({
-					type: 'commandsCompositionErrEvent',
-					cliName,
-					message: e.message,
-				});
+				// @ts-expect-error - option meant only for tests
+				if (!config?.noExit) console.error(e.message);
+				// @ts-expect-error - return path meant only for tests
+				else return e.message;
 			}
 		} else {
 			await eventHandler({
