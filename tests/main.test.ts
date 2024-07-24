@@ -1606,19 +1606,81 @@ describe(`Config styles' prevalence over themes test`, (it) => {
 });
 
 describe('Test function string to args convertion tests', (it) => {
-	it('Empty string', async () => {});
+	it('Empty string', async () => {
+		expect(shellArgs('')).toStrictEqual([]);
+	});
 
-	it('Regular format', async () => {});
+	it('Regular format', async () => {
+		expect(shellArgs('cmd --flag var -s string --str=val')).toStrictEqual([
+			'cmd',
+			'--flag',
+			'var',
+			'-s',
+			'string',
+			'--str=val',
+		]);
+	});
 
-	it('With quotes', async () => {});
+	it('With quotes', async () => {
+		expect(shellArgs('cmd "--flag" var -s "string" --str="val"')).toStrictEqual([
+			'cmd',
+			'--flag',
+			'var',
+			'-s',
+			'string',
+			'--str=val',
+		]);
+	});
 
-	it('With quotes and spaces', async () => {});
+	it('With quotes and spaces', async () => {
+		expect(shellArgs('cmd "--flag" var -s "string string2" --str="val spaces"')).toStrictEqual([
+			'cmd',
+			'--flag',
+			'var',
+			'-s',
+			'string string2',
+			'--str=val spaces',
+		]);
+	});
 
-	it('With quotes and spaces, multiline', async () => {});
+	it('With quotes and spaces, multiline', async () => {
+		expect(shellArgs(
+'cmd "--flag" var -s "string string2" \
+			 --str="val \
+spaces"',
+		)).toStrictEqual([
+			'cmd',
+			'--flag',
+			'var',
+			'-s',
+			'string string2',
+			'--str=val spaces',
+		]);
+	});
 
-	it('Empty multiline', async () => {});
+	it('Empty multiline', async () => {
+		expect(shellArgs(
+' \
+\
+\
+			',
+		)).toStrictEqual([]);
+	});
 
-	it('Multiline', async () => {});
+	it('Multiline', async () => {
+		expect(shellArgs(
+'cmd --flag \
+			var\
+			 -s string --str=val',
+		)).toStrictEqual([
+			'cmd',
+			'--flag',
+			'var',
+			'-s',
+			'string',
+			'--str=val',
+		]);
+	});
 });
 
 describe('Type tests', (it) => {
@@ -1639,30 +1701,30 @@ describe('Type tests', (it) => {
 		debug: boolean('dbg').alias('g').hidden(),
 		num: number('num'),
 		pos: positional(),
-		int: number('num').int(),
+		int: number('int').int(),
 		enpos: positional('Enum positional').enum('first', 'second', 'third'),
+	};
+
+	type ExpectedType = {
+		dialect: 'pg' | 'mysql' | 'sqlite';
+		schema: string | undefined;
+		out: string | undefined;
+		name: string | undefined;
+		breakpoints: string | undefined;
+		custom: string | undefined;
+		config: string;
+		flag: boolean | undefined;
+		defFlag: boolean;
+		defString: string;
+		debug: boolean | undefined;
+		num: number | undefined;
+		pos: string | undefined;
+		int: number | undefined;
+		enpos: 'first' | 'second' | 'third' | undefined;
 	};
 
 	it('Param type inferrence test', () => {
 		type GenerateOptions = TypeOf<typeof generateOps>;
-
-		type ExpectedType = {
-			dialect: 'pg' | 'mysql' | 'sqlite';
-			schema: string | undefined;
-			out: string | undefined;
-			name: string | undefined;
-			breakpoints: string | undefined;
-			custom: string | undefined;
-			config: string;
-			flag: boolean | undefined;
-			defFlag: boolean;
-			defString: string;
-			debug: boolean | undefined;
-			num: number | undefined;
-			pos: string | undefined;
-			int: number | undefined;
-			enpos: 'first' | 'second' | 'third' | undefined;
-		};
 
 		expectTypeOf<GenerateOptions>().toEqualTypeOf<ExpectedType>();
 	});
@@ -1672,28 +1734,34 @@ describe('Type tests', (it) => {
 
 		type HandlerOpts = typeof hdl extends (options: infer Options) => any ? Options : never;
 
-		type ExpectedType = {
-			dialect: 'pg' | 'mysql' | 'sqlite';
-			schema: string | undefined;
-			out: string | undefined;
-			name: string | undefined;
-			breakpoints: string | undefined;
-			custom: string | undefined;
-			config: string;
-			flag: boolean | undefined;
-			defFlag: boolean;
-			defString: string;
-			debug: boolean | undefined;
-			num: number | undefined;
-			pos: string | undefined;
-			int: number | undefined;
-			enpos: 'first' | 'second' | 'third' | undefined;
-		};
-
 		expectTypeOf<HandlerOpts>().toEqualTypeOf<ExpectedType>();
 	});
 
-	it('Transorm type mutation test', () => {});
+	it('Transorm type mutation test', () => {
+		command({
+			name: 'test',
+			options: generateOps,
+			transform: (opts) => {
+				expectTypeOf(opts).toEqualTypeOf<ExpectedType>();
+				return 'transformed' as const;
+			},
+			handler: (opts) => {
+				expectTypeOf(opts).toEqualTypeOf<'transformed'>();
+			},
+		});
+	});
 
-	it('Async transorm type mutation test', () => {});
+	it('Async transorm type mutation test', () => {
+		command({
+			name: 'test',
+			options: generateOps,
+			transform: async (opts) => {
+				expectTypeOf(opts).toEqualTypeOf<ExpectedType>();
+				return 'transformed' as const;
+			},
+			handler: (opts) => {
+				expectTypeOf(opts).toEqualTypeOf<'transformed'>();
+			},
+		});
+	});
 });
