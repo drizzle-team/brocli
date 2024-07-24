@@ -90,6 +90,8 @@ const cmd = command({
 });
 
 ```
+
+### Option builder
 Initial builder functions:
 
 -   `string(name?: string)` - defines option as a string-type option which requires data to be passed as `--option=value` or `--option value`    
@@ -202,6 +204,7 @@ commands.push(command({
     name: 'command', 
     aliases: ['c', 'cmd'],
     desc: 'Description goes here',
+    shortDesc: 'Short description'
     hidden: false,
     options: commandOptions,
     transform: (options) => {
@@ -234,15 +237,17 @@ Parameters:
 
 -   `hidden` - sets command as hidden - if `true`, command will be omitted from being displayed in `help` command  
 
--   `options` - object containing command options created using `string()` and `boolean()` functions  
+-   `options` - object containing command options created using `string` and `boolean` functions  
 
 -   `transform` - optional function to preprocess options before they are passed to handler    
     :warning: - type of return mutates type of handler's input  
 
 -   `handler` - function, which will be executed in case of successful option parse  
+    :warning: - must be present if your command doesn't have subcommands  
+    If command has subcommands but no handler, help for this command is going to be called instead of handler
 
 -   `help` - function or string, which will be executed or printed when help is called for this command  
-    :warning: - must be present if your command doesn't have subcommands, otherwise defaults to help for command  
+    :warning: - if passed, takes prevalence over theme's `commandHelp` event  
 
 -   `subcommands` - subcommands for command    
     :warning: - command can't have subcommands and `positional` options at the same time  
@@ -251,7 +256,7 @@ Parameters:
 
 ### Running commands
 
-After defining commands, you're going to need to execute `run()` function to start command execution
+After defining commands, you're going to need to execute `run` function to start command execution
 
 ```Typescript
 import { command, type Command, run, string, boolean, type TypeOf } from '@drizzle-team/brocli'
@@ -280,20 +285,75 @@ commands.push(command({
 // And so on...
 
 run(commands, {
-    name: 'my-program',
+    cliName: 'mysoft',
+    omitKeysOfUndefinedOptions: true,
+    argSource: customEnvironmentArgvStorage,
     version: '1.0.0',
     help: () => {
         console.log('Command list:');
         commands.forEach(c => console.log('This command does ... and has options ...'));
+    },
+	theme: async (event) => {
+		if (event.type === 'commandHelp') {
+			await myCustomUniversalCommandHelp(event.command);
+
+			return true;
+		}
+
+		if (event.type === 'unknownError') {
+			console.log('Something went wrong...');
+
+			return true;
+		}
+
+		return false;
+	},
+    hook: (event, command) => {
+        if(event === 'before') console.log(`Command '${command.name}' started`)
+        if(event === 'after') console.log(`Command '${command.name}' succesfully finished it's work`)
     }
 })
 ```
 
-:speech_balloon: - in case cli arguments are not stored in `process.argv` in your environment, you can pass custom argument source to a second argument of `run()`, however note that first two elements of such source will be ignored as they are expected to store executable and executed file paths instead of args.  
-:speech_balloon: - custom help and version output handlers or strings can be passed to a second argument to replace default brocli outputs for those operations with your own.  
+Parameters:
+
+-   `cliName` - name that's used to invoke your application from cli.  
+Used for themes that print usage examples, example:  
+`app do-task --help` results in `Usage: app do-task <positional> ...`  
+Default: `undefined`
+
+-   `omitKeysOfUndefinedOptions` - flag that determines whether undefined options will be passed to transform\handler or not  
+Default: `false`  
+
+-   `argSource` - location of array of args in your environment  
+:warning: - first two items of this storage will be ignored as they typically contain executable and executed file paths  
+Default: `process.argv`
+
+-   `version` - string or handler used to print your app version  
+:warning: - if passed, takes prevalence over theme's version event
+
+-   `help` - string or handler used to print your app's global help    
+:warning: - if passed, takes prevalence over theme's `globalHelp` event
+
+-   `theme(event: BroCliEvent)` - function that's used to customize messages that are printed on various events    
+Return:  
+    `true` | `Promise<true>` if you consider event processed  
+    `false` | `Promise<false>` to redirect event to default theme  
+
+-   `hook(event: EventType, command: Command)` - function that's used to execute code before and after every command's `transform` and `handler` execution  
+
+### Additional functions
+
+-   `commandsInfo(commands: Command[])` - get simplified representation of your command collection  
+Can be used to generate docs  
+
+-   `test(command: Command, args: string)` - test behaviour for command with specified arguments  
+:warning: - if command has `transform`, it will get called, however `handler` won't  
+
+-   `getCommandNameWithParents(command: Command)` - get subcommand's name with parent command names  
 
 ## CLI
 
-In `BroCLI`, command doesn't have to be the first argument, instead it may be contained in any order.  
-To make this possible, hovewer, option that's stated right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>` (does not apply to reserved flags: [ `--help` | `-h` | `--version` | `-v`])    
+In `BroCLI`, command doesn't have to be the first argument, instead it may be passed in any order.  
+To make this possible, hovewer, option that's passed right before command should have an explicit value, even if it is a flag: `--verbose true <command-name>` (does not apply to reserved flags: [ `--help` | `-h` | `--version` | `-v`])    
 Options are parsed in strict mode, meaning that having any unrecognized options will result in an error.     
