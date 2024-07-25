@@ -256,7 +256,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 					const values = option.enumVals!;
 
 					msg = option.type === 'positional'
-						? `Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
+						? `Invalid value: value for the positional argument '${option.name}' must be either one of the following: ${
 							values.join(', ')
 						}; Received: ${data}`
 						: `Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
