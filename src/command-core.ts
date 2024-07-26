@@ -383,6 +383,7 @@ const getCommand = (commands: Command[], args: string[], cliName?: string) => {
 	if (!command) {
 		throw new BroCliError(undefined, {
 			type: 'unknownCommandEvent',
+			commands,
 			cliName,
 			offender: firstCandidate.data,
 		});

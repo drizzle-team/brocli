@@ -29,6 +29,7 @@ export type UnrecognizedArgsEvent = {
 
 export type UnknownCommandEvent = {
 	type: 'unknownCommandEvent';
+	commands: Command[];
 	cliName: string | undefined;
 	offender: string;
 };

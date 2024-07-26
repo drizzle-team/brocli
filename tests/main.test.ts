@@ -661,6 +661,7 @@ describe('Parsing tests', (it) => {
 
 		expect(eventMocks.unknownCommandEvent.mock.lastCall).toStrictEqual([{
 			type: 'unknownCommandEvent',
+			commands,
 			cliName: undefined,
 			offender: 'unknown',
 		}] as BroCliEvent[]);
