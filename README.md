@@ -35,7 +35,39 @@ Brocli is meant to solve a list of challenges we've faced while building
 - [x] Themes, simple API to style global/command helps
 - [x] Docs generation API to eliminate docs drifting
 
-### API
+### Learn by examples
+If you need API referece - [see here](#api-reference), this list of practical example 
+is meant to a be a zero to hero walk through for you to learn Brocli 🚀  
+
+Simple echo command with positional argument:
+```ts
+import { run, command, positional } from "@drizzle-team/brocli";
+
+const echo = command({
+  name: "echo",
+  options: {
+    text: positional().desc("Text to echo").default("echo"),
+  },
+  handler: (opts) => {
+    console.log(opts.text);
+  },
+});
+
+run([echo])
+```
+```bash
+~ bun run index.ts echo
+echo
+
+~ bun run index.ts echo text
+text
+```
+
+  
+  
+
+
+### API reference
 Brocli **`command`** declaration has:  
 `name` - command name, will be listed in `help`  
 `desc` - optional description, will be listed in the command `help`  
