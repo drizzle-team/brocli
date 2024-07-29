@@ -1,5 +1,5 @@
 # Brocli 🥦
-Modern type-safe way of building CLIs  
+Modern type-safe way of building CLIs with TypeScript or JavaScript  
 by [Drizzle Team](https://drizzle.team)  
 
 ```ts
@@ -62,6 +62,39 @@ echo
 ~ bun run index.ts echo text
 text
 ```
+
+Print version with `--version -v`:
+```ts
+...
+
+run([echo], {
+  version: "1.0.0",
+);
+```
+```bash
+~ bun run index.ts --version
+1.0.0
+```
+  
+Version accepts async callback for you to do any kind of io if necessary before printing cli version:  
+```ts
+import { run, command, positional } from "@drizzle-team/brocli";
+
+const version = async () => {
+  // you can run async here, for example fetch version of runtime-dependend library
+
+  const envVersion = process.env.CLI_VERSION;
+  console.log(chalk.gray(envVersion), "\n");
+};
+
+const echo = command({ ... });
+
+run([echo], {
+  version: version,
+);
+```
+
+
 
   
   
