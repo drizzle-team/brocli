@@ -19,6 +19,7 @@ export type {
 	BroCliEventType,
 	CommandHelpEvent,
 	EventHandler,
+	GenericValidationViolation,
 	GlobalHelpEvent,
 	MissingArgsEvent,
 	UnknownCommandEvent,

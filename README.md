@@ -350,7 +350,8 @@ commands.push(command({
 // And so on...
 
 run(commands, {
-    cliName: 'mysoft',
+    name: 'mysoft',
+    description: 'MySoft CLI',
     omitKeysOfUndefinedOptions: true,
     argSource: customEnvironmentArgvStorage,
     version: '1.0.0',
@@ -382,9 +383,19 @@ run(commands, {
 
 Parameters:
 
--   `cliName` - name that's used to invoke your application from cli.  
+-   `name` - name that's used to invoke your application from cli.  
 Used for themes that print usage examples, example:  
-`app do-task --help` results in `Usage: app do-task <positional> ...`  
+`app do-task --help` results in `Usage: app do-task <positional> [flags] ...`  
+Default: `undefined`
+
+-   `description` - description of your app  
+Used for themes, example:  
+`myapp --help` results in  
+```
+MyApp CLI
+
+Usage: myapp [command]...
+```  
 Default: `undefined`
 
 -   `omitKeysOfUndefinedOptions` - flag that determines whether undefined options will be passed to transform\handler or not  

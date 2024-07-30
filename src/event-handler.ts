@@ -2,76 +2,94 @@ import { type Command, command, getCommandNameWithParents } from './command-core
 import type { BuilderConfig, ProcessedBuilderConfig } from './option-builder';
 
 export type CommandHelpEvent = {
-	type: 'commandHelp';
-	cliName: string | undefined;
+	type: 'command_help';
+	name: string | undefined;
+	description: string | undefined;
 	command: Command;
 };
 
 export type GlobalHelpEvent = {
-	type: 'globalHelp';
-	cliName: string | undefined;
+	type: 'global_help';
+	description: string | undefined;
+	name: string | undefined;
 	commands: Command[];
 };
 
 export type MissingArgsEvent = {
-	type: 'missingArgsErr';
-	cliName: string | undefined;
+	type: 'error';
+	violation: 'missing_args_error';
+	name: string | undefined;
+	description: string | undefined;
 	command: Command;
 	missing: [string[], ...string[][]];
 };
 
 export type UnrecognizedArgsEvent = {
-	type: 'unrecognizedArgsErr';
-	cliName: string | undefined;
+	type: 'error';
+	violation: 'unrecognized_args_error';
+	name: string | undefined;
+	description: string | undefined;
 	command: Command;
 	unrecognized: [string, ...string[]];
 };
 
 export type UnknownCommandEvent = {
-	type: 'unknownCommandEvent';
+	type: 'error';
+	violation: 'unknown_command_error';
+	name: string | undefined;
+	description: string | undefined;
 	commands: Command[];
-	cliName: string | undefined;
 	offender: string;
 };
 
 export type UnknownSubcommandEvent = {
-	type: 'unknownSubcommandEvent';
-	cliName: string | undefined;
+	type: 'error';
+	violation: 'unknown_subcommand_error';
+	name: string | undefined;
+	description: string | undefined;
 	command: Command;
 	offender: string;
 };
 
 export type UnknownErrorEvent = {
-	type: 'unknownError';
-	cliName: string | undefined;
+	type: 'error';
+	violation: 'unknown_error';
+	name: string | undefined;
+	description: string | undefined;
 	error: unknown;
 };
 
 export type VersionEvent = {
 	type: 'version';
-	cliName: string | undefined;
+	name: string | undefined;
+	description: string | undefined;
 };
 
-export type ValidationViolation =
-	| 'Above max'
-	| 'Below min'
-	| 'Expected int'
-	| 'Invalid boolean syntax'
-	| 'Invalid string syntax'
-	| 'Invalid number syntax'
-	| 'Invalid number value'
-	| 'Enum violation';
+export type GenericValidationViolation =
+	| 'above_max'
+	| 'below_min'
+	| 'expected_int'
+	| 'invalid_boolean_syntax'
+	| 'invalid_string_syntax'
+	| 'invalid_number_syntax'
+	| 'invalid_number_value'
+	| 'enum_violation';
+
+export type ValidationViolation = BroCliEvent extends infer Event
+	? Event extends { violation: string } ? Event['violation'] : never
+	: never;
 
 export type ValidationErrorEvent = {
-	type: 'validationError';
-	cliName: string | undefined;
+	type: 'error';
+	violation: GenericValidationViolation;
+	name: string | undefined;
+	description: string | undefined;
 	command: Command;
 	option: ProcessedBuilderConfig;
 	offender: {
 		namePart?: string;
 		dataPart?: string;
 	};
-	violation: ValidationViolation;
 };
 
 export type BroCliEvent =
@@ -147,10 +165,10 @@ const getOptionTypeText = (option: BuilderConfig) => {
 export type EventHandler = (event: BroCliEvent) => boolean | Promise<boolean>;
 export const defaultEventHandler: EventHandler = async (event) => {
 	switch (event.type) {
-		case 'commandHelp': {
+		case 'command_help': {
 			const command = event.command;
 			const commandName = getCommandNameWithParents(command);
-			const cliName = event.cliName;
+			const cliName = event.name;
 			const desc = command.desc ?? command.shortDesc;
 
 			if (desc !== undefined) {
@@ -268,8 +286,14 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			return true;
 		}
 
-		case 'globalHelp': {
-			const cliName = event.cliName;
+		case 'global_help': {
+			const cliName = event.name;
+			const desc = event.description;
+			if (desc?.length) {
+				console.log(desc);
+				console.log('\n');
+			}
+
 			console.log('Usage:');
 			console.log(`  ${cliName ? cliName + ' ' : ''}[command]`);
 
@@ -295,70 +319,18 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		}
 
 		case 'version': {
-			try {
-				const jason = await import('package.json');
-				if (typeof jason === 'object' && jason !== null && (<any> jason)['version']) console.log((<any> jason).version);
-			} catch (error) {
-				// Do nothing
-			}
-
 			return true;
 		}
 
-		case 'unknownCommandEvent': {
-			const msg = `Unknown command: '${event.offender}'.\nType '--help' to get help on the cli.`;
-
-			console.error(msg);
-
-			return true;
-		}
-
-		case 'unknownSubcommandEvent': {
-			const cName = getCommandNameWithParents(event.command);
-			const msg = `Unknown command: ${cName} ${event.offender}.\nType '${cName} --help' to get the help on command.`;
-
-			console.error(msg);
-
-			return true;
-		}
-
-		case 'missingArgsErr': {
-			const missingOpts = event.missing;
-
-			const msg = `Command '${command.name}' is missing following required options: ${
-				missingOpts.map((opt) => {
-					const name = opt.shift()!;
-					const aliases = opt;
-
-					if (aliases.length) return `${name} [${aliases.join(', ')}]`;
-
-					return name;
-				}).join(', ')
-			}`;
-
-			console.error(msg);
-
-			return true;
-		}
-
-		case 'unrecognizedArgsErr': {
-			const { command, unrecognized } = event;
-			const msg = `Unrecognized options for command '${command.name}': ${unrecognized.join(', ')}`;
-
-			console.error(msg);
-
-			return true;
-		}
-
-		case 'validationError': {
+		case 'error': {
 			let msg: string;
 
-			const matchedName = event.offender.namePart;
-			const data = event.offender.dataPart;
-			const option = event.option;
-
 			switch (event.violation) {
-				case 'Above max': {
+				case 'above_max': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+					const option = event.option;
+
 					const max = option.maxVal!;
 					msg =
 						`Invalid value: number type argument '${matchedName}' expects maximal value of ${max} as an input, got: ${data}`;
@@ -366,7 +338,11 @@ export const defaultEventHandler: EventHandler = async (event) => {
 					break;
 				}
 
-				case 'Below min': {
+				case 'below_min': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+					const option = event.option;
+
 					const min = option.minVal;
 
 					msg =
@@ -375,39 +351,56 @@ export const defaultEventHandler: EventHandler = async (event) => {
 					break;
 				}
 
-				case 'Expected int': {
+				case 'expected_int': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+
 					msg = `Invalid value: number type argument '${matchedName}' expects an integer as an input, got: ${data}`;
 
 					break;
 				}
 
-				case 'Invalid boolean syntax': {
+				case 'invalid_boolean_syntax': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+
 					msg =
 						`Invalid syntax: boolean type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value> | ${matchedName}.\nAllowed values: true, false, 0, 1`;
 
 					break;
 				}
 
-				case 'Invalid string syntax': {
+				case 'invalid_string_syntax': {
+					const matchedName = event.offender.namePart;
+
 					msg =
 						`Invalid syntax: string type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`;
 
 					break;
 				}
 
-				case 'Invalid number syntax': {
+				case 'invalid_number_syntax': {
+					const matchedName = event.offender.namePart;
+
 					msg =
 						`Invalid syntax: number type argument '${matchedName}' must have it's value passed in the following formats: ${matchedName}=<value> | ${matchedName} <value>`;
 
 					break;
 				}
 
-				case 'Invalid number value': {
+				case 'invalid_number_value': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+
 					msg = `Invalid value: number type argument '${matchedName}' expects a number as an input, got: ${data}`;
 					break;
 				}
 
-				case 'Enum violation': {
+				case 'enum_violation': {
+					const matchedName = event.offender.namePart;
+					const data = event.offender.dataPart;
+					const option = event.option;
+
 					const values = option.enumVals!;
 
 					msg = option.type === 'positional'
@@ -417,17 +410,61 @@ export const defaultEventHandler: EventHandler = async (event) => {
 						: `Invalid value: value for the argument '${matchedName}' must be either one of the following: ${
 							values.join(', ')
 						}; Received: ${data}`;
+
+					break;
+				}
+
+				case 'unknown_command_error': {
+					const msg = `Unknown command: '${event.offender}'.\nType '--help' to get help on the cli.`;
+
+					console.error(msg);
+
+					return true;
+				}
+
+				case 'unknown_subcommand_error': {
+					const cName = getCommandNameWithParents(event.command);
+					const msg =
+						`Unknown command: ${cName} ${event.offender}.\nType '${cName} --help' to get the help on command.`;
+
+					console.error(msg);
+
+					return true;
+				}
+
+				case 'missing_args_error': {
+					const missingOpts = event.missing;
+
+					msg = `Command '${command.name}' is missing following required options: ${
+						missingOpts.map((opt) => {
+							const name = opt.shift()!;
+							const aliases = opt;
+
+							if (aliases.length) return `${name} [${aliases.join(', ')}]`;
+
+							return name;
+						}).join(', ')
+					}`;
+
+					break;
+				}
+
+				case 'unrecognized_args_error': {
+					const { command, unrecognized } = event;
+					msg = `Unrecognized options for command '${command.name}': ${unrecognized.join(', ')}`;
+
+					break;
+				}
+
+				case 'unknown_error': {
+					const e = event.error;
+					console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
+
+					return true;
 				}
 			}
 
 			console.error(msg);
-
-			return true;
-		}
-
-		case 'unknownError': {
-			const e = event.error;
-			console.error(typeof e === 'object' && e !== null && 'message' in e ? e.message : e);
 
 			return true;
 		}
