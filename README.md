@@ -1,5 +1,5 @@
 # Brocli 🥦
-Modern type-safe way of building CLIs  
+Modern type-safe way of building CLIs with TypeScript or JavaScript  
 by [Drizzle Team](https://drizzle.team)  
 
 ```ts
@@ -35,7 +35,72 @@ Brocli is meant to solve a list of challenges we've faced while building
 - [x] Themes, simple API to style global/command helps
 - [x] Docs generation API to eliminate docs drifting
 
-### API
+### Learn by examples
+If you need API referece - [see here](#api-reference), this list of practical example 
+is meant to a be a zero to hero walk through for you to learn Brocli 🚀  
+
+Simple echo command with positional argument:
+```ts
+import { run, command, positional } from "@drizzle-team/brocli";
+
+const echo = command({
+  name: "echo",
+  options: {
+    text: positional().desc("Text to echo").default("echo"),
+  },
+  handler: (opts) => {
+    console.log(opts.text);
+  },
+});
+
+run([echo])
+```
+```bash
+~ bun run index.ts echo
+echo
+
+~ bun run index.ts echo text
+text
+```
+
+Print version with `--version -v`:
+```ts
+...
+
+run([echo], {
+  version: "1.0.0",
+);
+```
+```bash
+~ bun run index.ts --version
+1.0.0
+```
+  
+Version accepts async callback for you to do any kind of io if necessary before printing cli version:  
+```ts
+import { run, command, positional } from "@drizzle-team/brocli";
+
+const version = async () => {
+  // you can run async here, for example fetch version of runtime-dependend library
+
+  const envVersion = process.env.CLI_VERSION;
+  console.log(chalk.gray(envVersion), "\n");
+};
+
+const echo = command({ ... });
+
+run([echo], {
+  version: version,
+);
+```
+
+
+
+  
+  
+
+
+### API reference
 Brocli **`command`** declaration has:  
 `name` - command name, will be listed in `help`  
 `desc` - optional description, will be listed in the command `help`  
