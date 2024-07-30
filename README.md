@@ -100,7 +100,36 @@ run([echo], {
   
 
 
-### API reference
+# API reference
+[**`command`**](#command)  
+- [`command → name`](#command-name)
+- [`command → desc`](#command-desc)
+- [`command → shortDesc`](#command-shortDesc)
+- [`command → aliases`](#command-aliases)
+- [`command → options`](#command-options)
+- [`command → transform`](#command-transform)
+- [`command → handler`](#command-handler)
+- [`command → help`](#command-help)
+- [`command → hidden`](#command-hidden)
+- [`command → metadata`](#command-metadata)
+
+[**`options`**](#options)  
+- [`string`](#options-string)
+- [`boolean`](#options-boolean)
+- [`number`](#options-number)
+- [`enum`](#options-enum)
+- [`positional`](#options-positional)
+- [`required`](#options-required)
+- [`alias`](#options-alias)
+- [`desc`](#options-desc)
+- [`default`](#options-default)
+- [`hidden`](#options-hidden)
+
+  
+[**`run`**](#run)
+- [`string`](#options-string)
+
+  
 Brocli **`command`** declaration has:  
 `name` - command name, will be listed in `help`  
 `desc` - optional description, will be listed in the command `help`  
