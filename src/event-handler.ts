@@ -195,7 +195,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 
 			if (command.aliases) {
 				console.log(`\nAliases:`);
-				console.log(`  ${command.aliases.join(', ')}`);
+				console.log(`  ${[command.name, ...command.aliases].join(', ')}`);
 			}
 
 			if (command.subcommands) {
