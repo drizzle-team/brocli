@@ -170,6 +170,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const commandName = getCommandNameWithParents(command);
 			const cliName = event.name;
 			const desc = command.desc ?? command.shortDesc;
+			const subs = command.subcommands?.filter((s) => !s.hidden);
+			const subcommands = subs && subs.length ? subs : undefined;
 
 			if (desc !== undefined) {
 				console.log(`\n${desc}`);
@@ -198,14 +200,14 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				console.log(`  ${[command.name, ...command.aliases].join(', ')}`);
 			}
 
-			if (command.subcommands) {
+			if (subcommands) {
 				console.log('\nAvailable Commands:');
 				const padding = 3;
-				const maxLength = command.subcommands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
+				const maxLength = subcommands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
 				const paddedLength = maxLength + padding;
 				const preDescPad = 2 + paddedLength;
 
-				const data = command.subcommands.map((s) =>
+				const data = subcommands.map((s) =>
 					`  ${s.name.padEnd(paddedLength)}${
 						(() => {
 							const description = s.shortDesc ?? s.desc;
@@ -275,7 +277,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			console.log(`  -h, --help      help for ${commandName}`);
 			console.log(`  -v, --version   version${cliName ? ` for ${cliName}` : ''}`);
 
-			if (command.subcommands?.length) {
+			if (subcommands) {
 				console.log(
 					`\nUse "${
 						cliName ? cliName + ' ' : ''
@@ -289,6 +291,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 		case 'global_help': {
 			const cliName = event.name;
 			const desc = event.description;
+			const commands = event.commands.filter((c) => !c.hidden);
+
 			if (desc?.length) {
 				console.log(desc);
 				console.log('\n');
@@ -297,7 +301,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			console.log('Usage:');
 			console.log(`  ${cliName ? cliName + ' ' : ''}[command]`);
 
-			if (event.commands) {
+			if (commands.length) {
 				console.log('\nAvailable Commands:');
 				const padding = 3;
 				const maxLength = event.commands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
@@ -308,6 +312,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				)
 					.join('\n');
 				console.log(data);
+			} else {
+				console.log('\nNo available commands.');
 			}
 
 			console.log('\nFlags:');
