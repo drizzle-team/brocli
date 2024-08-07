@@ -304,10 +304,10 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			if (commands.length) {
 				console.log('\nAvailable Commands:');
 				const padding = 3;
-				const maxLength = event.commands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
+				const maxLength = commands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
 				const paddedLength = maxLength + padding;
 
-				const data = event.commands.map((s) =>
+				const data = commands.map((s) =>
 					`  ${s.name.padEnd(paddedLength)}${(s.shortDesc ?? s.desc)?.split('\n').shift()!}`
 				)
 					.join('\n');
