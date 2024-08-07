@@ -293,9 +293,8 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const desc = event.description;
 			const commands = event.commands.filter((c) => !c.hidden);
 
-			if (desc?.length) {
-				console.log(desc);
-				console.log('\n');
+			if (desc !== undefined) {
+				console.log(`${desc}\n`);
 			}
 
 			console.log('Usage:');
