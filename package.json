@@ -3,7 +3,7 @@
 	"type": "module",
 	"author": "Drizzle Team",
 	"version": "0.10.0",
-	"description": "Typed CLI command runner",
+	"description": "Modern type-safe way of building CLIs",
 	"license": "Apache-2.0",
 	"sideEffects": false,
 	"publishConfig": {
