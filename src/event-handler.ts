@@ -306,8 +306,21 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				const maxLength = commands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
 				const paddedLength = maxLength + padding;
 
-				const data = commands.map((s) =>
-					`  ${s.name.padEnd(paddedLength)}${(s.shortDesc ?? s.desc)?.split('\n').shift()!}`
+				const data = commands.map((с) =>
+					`  ${с.name.padEnd(paddedLength)}${
+						(() => {
+							const desc = с.shortDesc ?? с.desc;
+
+							if (!desc?.length) return '';
+
+							const split = desc.split('\n');
+							const first = split.shift()!;
+
+							const final = [first, ...split.map((s) => ''.padEnd(paddedLength + 2) + s)].join('\n');
+
+							return final;
+						})()
+					}`
 				)
 					.join('\n');
 				console.log(data);
