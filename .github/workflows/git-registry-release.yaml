@@ -1,0 +1,74 @@
+name: Release
+
+on: workflow_dispatch
+
+jobs:
+    release:
+        permissions: write-all
+        strategy:
+            fail-fast: false
+            matrix:
+                package:
+                    - brocli
+        runs-on: ubuntu-20.04
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 18
+                  registry-url: 'https://npm.pkg.github.com'
+
+            - uses: pnpm/action-setup@v3
+              name: Install pnpm
+              id: pnpm-install
+              with:
+                  version: '9'
+                  run_install: false
+
+            - name: Get pnpm store directory
+              id: pnpm-cache
+              shell: bash
+              run: |
+                  echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_OUTPUT
+
+            - uses: actions/cache@v4
+              name: Setup pnpm cache
+              with:
+                  path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+                  key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+                  restore-keys: |
+                      ${{ runner.os }}-pnpm-store-
+
+            - name: Install dependencies
+              run: pnpm install --frozen-lockfile
+
+            - name: Lint
+              run: pnpm lint
+
+            - name: Build
+              run: |
+                  pnpm build
+
+            - name: Pack
+              shell: bash
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  npm run pack
+
+            - name: Run @arethetypeswrong/cli
+              run: |
+                  pnpm attw package.tgz
+
+            - name: Publish
+              shell: bash
+              env:
+                  NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                  version="$(jq -r .version package.json)"
+
+                  echo "Publishing ${{ matrix.package }}@$version"
+                  npm run publish --access public
+
+                  echo "npm: \`+ ${{ matrix.package }}@$version\`" >> $GITHUB_STEP_SUMMARY
