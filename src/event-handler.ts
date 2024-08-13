@@ -306,10 +306,10 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				const maxLength = commands.reduce((p, e) => e.name.length > p ? e.name.length : p, 0);
 				const paddedLength = maxLength + padding;
 
-				const data = commands.map((с) =>
-					`  ${с.name.padEnd(paddedLength)}${
+				const data = commands.map((c) =>
+					`  ${c.name.padEnd(paddedLength)}${
 						(() => {
-							const desc = с.shortDesc ?? с.desc;
+							const desc = c.shortDesc ?? c.desc;
 
 							if (!desc?.length) return '';
 
