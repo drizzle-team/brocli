@@ -2,7 +2,7 @@
 	"name": "@drizzle-team/brocli",
 	"type": "module",
 	"author": "Drizzle Team",
-	"version": "0.10.1",
+	"version": "0.10.2",
 	"description": "Modern type-safe way of building CLIs",
 	"license": "Apache-2.0",
 	"sideEffects": false,

@@ -451,7 +451,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				}
 
 				case 'missing_args_error': {
-					const missingOpts = event.missing;
+					const { missing: missingOpts, command } = event;
 
 					msg = `Command '${command.name}' is missing following required options: ${
 						missingOpts.map((opt) => {
