@@ -4,6 +4,7 @@ import { defaultEventHandler, type EventHandler, eventHandlerWrapper } from './e
 import {
 	type GenericBuilderInternals,
 	type GenericBuilderInternalsFields,
+	type GenericBuilderInternalsLimited,
 	type OutputType,
 	type ProcessedBuilderConfig,
 	type ProcessedOptions,
@@ -35,14 +36,22 @@ export type CommandsInfo = Record<string, CommandInfo>;
 
 export type EventType = 'before' | 'after';
 
-export type BroCliConfig = {
+export type BroCliConfig<
+	TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined = undefined,
+	TOptsData = TOpts extends Record<string, GenericBuilderInternals> ? TypeOf<TOpts> : undefined,
+> = {
 	name?: string;
 	description?: string;
 	argSource?: string[];
 	help?: string | Function;
 	version?: string | Function;
 	omitKeysOfUndefinedOptions?: boolean;
-	hook?: (event: EventType, command: Command) => any;
+	globals?: TOpts;
+	hook?: (
+		event: EventType,
+		command: Command,
+		options: TOptsData,
+	) => any;
 	theme?: EventHandler;
 };
 
@@ -648,6 +657,7 @@ const parseOptions = (
 	omitKeysOfUndefinedOptions?: boolean,
 ): Record<string, OutputType> | 'help' | 'version' | undefined => {
 	const options = command.options;
+	let noOpts = !options;
 
 	const optEntries = Object.entries(options ?? {} as Exclude<typeof options, undefined>).map(
 		(opt) => [opt[0], opt[1].config] as [string, ProcessedBuilderConfig],
@@ -715,6 +725,72 @@ const parseOptions = (
 		});
 	}
 
+	return noOpts ? undefined : result;
+};
+
+const parseGlobals = (
+	command: Command,
+	globals: ProcessedOptions<Record<string, GenericBuilderInternals>> | undefined,
+	args: string[],
+	cliName: string | undefined,
+	cliDescription: string | undefined,
+	omitKeysOfUndefinedOptions?: boolean,
+): Record<string, OutputType> | 'help' | 'version' | undefined => {
+	if (!globals) return undefined;
+
+	const optEntries = Object.entries(globals).map(
+		(opt) => [opt[0], opt[1].config] as [string, ProcessedBuilderConfig],
+	);
+
+	const result: Record<string, OutputType> = {};
+	const missingRequiredArr: string[][] = [];
+
+	for (let i = 0; i < args.length; ++i) {
+		const arg = args[i]!;
+		const nextArg = args[i + 1];
+
+		const {
+			data,
+			name,
+			option,
+			skipNext,
+			isHelp,
+			isVersion,
+		} = parseArg(command, optEntries, [], arg, nextArg, cliName, cliDescription);
+		if (skipNext) ++i;
+
+		if (isHelp) return 'help';
+		if (isVersion) return 'version';
+		if (!option) continue;
+		delete args[i];
+		if (skipNext) delete args[i - 1];
+
+		result[name!] = data;
+	}
+
+	for (const [optKey, option] of optEntries) {
+		const data = result[optKey] ?? option.default;
+
+		if (!omitKeysOfUndefinedOptions) {
+			result[optKey] = data;
+		} else {
+			if (data !== undefined) result[optKey] = data;
+		}
+
+		if (option.isRequired && result[optKey] === undefined) missingRequiredArr.push([option.name!, ...option.aliases]);
+	}
+
+	if (missingRequiredArr.length) {
+		throw new BroCliError(undefined, {
+			type: 'error',
+			violation: 'missing_args_error',
+			name: cliName,
+			description: cliDescription,
+			command,
+			missing: missingRequiredArr as [string[], ...string[][]],
+		});
+	}
+
 	return Object.keys(result).length ? result : undefined;
 };
 
@@ -765,6 +841,62 @@ const validateCommands = (commands: Command[], parent?: Command) => {
 	return commands;
 };
 
+const validateGlobalsInner = (
+	commands: Command[],
+	globals: GenericBuilderInternalsFields[],
+) => {
+	for (const c of commands) {
+		const { options } = c;
+		if (!options) continue;
+
+		for (const { config: opt } of Object.values(options)) {
+			const foundNameOverlap = globals.find(({ config: g }) => g.name === opt.name);
+			if (foundNameOverlap) {
+				throw new BroCliError(
+					`Global options overlap with option '${opt.name}' of command '${getCommandNameWithParents(c)}' on name`,
+				);
+			}
+
+			let foundAliasOverlap = opt.aliases.find((a) => globals.find(({ config: g }) => g.name === a))
+				?? globals.find(({ config: g }) => opt.aliases.find((a) => a === g.name));
+			if (!foundAliasOverlap) {
+				for (const { config: g } of globals) {
+					foundAliasOverlap = g.aliases.find((gAlias) => opt.name === gAlias);
+
+					if (foundAliasOverlap) break;
+				}
+			}
+			if (!foundAliasOverlap) {
+				for (const { config: g } of globals) {
+					foundAliasOverlap = g.aliases.find((gAlias) => opt.aliases.find((a) => a === gAlias));
+
+					if (foundAliasOverlap) break;
+				}
+			}
+
+			if (foundAliasOverlap) {
+				throw new BroCliError(
+					`Global options overlap with option '${opt.name}' of command '${
+						getCommandNameWithParents(c)
+					}' on alias '${foundAliasOverlap}'`,
+				);
+			}
+		}
+
+		if (c.subcommands) validateGlobalsInner(c.subcommands, globals);
+	}
+};
+
+const validateGlobals = (
+	commands: Command[],
+	globals: ProcessedOptions<Record<string, GenericBuilderInternals>> | undefined,
+) => {
+	if (!globals) return;
+	const globalEntries = Object.values(globals);
+
+	validateGlobalsInner(commands, globalEntries);
+};
+
 const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), ...arr.slice(idx + 1, arr.length)];
 
 /**
@@ -774,7 +906,12 @@ const removeByIndex = <T>(arr: T[], idx: number): T[] => [...arr.slice(0, idx), 
  *
  * @param config - additional settings
  */
-export const run = async (commands: Command[], config?: BroCliConfig): Promise<void> => {
+export const run = async <
+	TOpts extends Record<string, GenericBuilderInternalsLimited> | undefined = undefined,
+>(
+	commands: Command[],
+	config?: BroCliConfig<TOpts>,
+): Promise<void> => {
 	const eventHandler = config?.theme
 		? eventHandlerWrapper(config.theme)
 		: defaultEventHandler;
@@ -784,9 +921,12 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 	const omitKeysOfUndefinedOptions = config?.omitKeysOfUndefinedOptions ?? false;
 	const cliName = config?.name;
 	const cliDescription = config?.description;
+	const globals = config?.globals;
 
 	try {
 		const processedCmds = validateCommands(commands);
+		const processedGlobals = globals ? validateOptions(globals) : undefined;
+		if (processedGlobals) validateGlobals(processedCmds, processedGlobals);
 
 		let args = argSource.slice(2, argSource.length);
 		if (!args.length) {
@@ -795,6 +935,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 				description: cliDescription,
 				name: cliName,
 				commands: processedCmds,
+				globals: processedGlobals,
 			});
 		}
 
@@ -812,6 +953,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 					description: cliDescription,
 					name: cliName,
 					command: command,
+					globals: processedGlobals,
 				});
 			} else {
 				return help !== undefined ? await executeOrLog(help) : await eventHandler({
@@ -819,6 +961,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 					description: cliDescription,
 					name: cliName,
 					commands: processedCmds,
+					globals: processedGlobals,
 				});
 			}
 		}
@@ -840,6 +983,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 				description: cliDescription,
 				name: cliName,
 				commands: processedCmds,
+				globals: processedGlobals,
 			});
 		}
 
@@ -859,6 +1003,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 					description: cliDescription,
 					name: cliName,
 					command: helpCommand,
+					globals: processedGlobals,
 				})
 				: help !== undefined
 				? await executeOrLog(help)
@@ -867,20 +1012,38 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 					description: cliDescription,
 					name: cliName,
 					commands: processedCmds,
+					globals: processedGlobals,
 				});
 		}
 
-		const optionResult = parseOptions(command, newArgs, cliName, cliDescription, omitKeysOfUndefinedOptions);
+		const gOptionResult = parseGlobals(
+			command,
+			processedGlobals,
+			newArgs,
+			cliName,
+			cliDescription,
+			omitKeysOfUndefinedOptions,
+		);
+		const optionResult = gOptionResult && (gOptionResult === 'help' || gOptionResult === 'version')
+			? gOptionResult
+			: parseOptions(
+				command,
+				globals ? newArgs.filter((a) => a !== undefined) : newArgs,
+				cliName,
+				cliDescription,
+				omitKeysOfUndefinedOptions,
+			);
 
-		if (optionResult === 'help') {
+		if (optionResult === 'help' || gOptionResult === 'help') {
 			return command.help !== undefined ? await executeOrLog(command.help) : await eventHandler({
 				type: 'command_help',
 				description: cliDescription,
 				name: cliName,
 				command: command,
+				globals: processedGlobals,
 			});
 		}
-		if (optionResult === 'version') {
+		if (optionResult === 'version' || gOptionResult === 'version') {
 			return version !== undefined ? await executeOrLog(version) : await eventHandler({
 				type: 'version',
 				name: cliName,
@@ -889,9 +1052,9 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 		}
 
 		if (command.handler) {
-			if (config?.hook) await config.hook('before', command);
+			if (config?.hook) await config.hook('before', command, gOptionResult as any);
 			await command.handler(command.transform ? await command.transform(optionResult) : optionResult);
-			if (config?.hook) await config.hook('after', command);
+			if (config?.hook) await config.hook('after', command, gOptionResult as any);
 			return;
 		} else {
 			return command.help !== undefined ? await executeOrLog(command.help) : await eventHandler({
@@ -899,6 +1062,7 @@ export const run = async (commands: Command[], config?: BroCliConfig): Promise<v
 				description: cliDescription,
 				name: cliName,
 				command: command,
+				globals: processedGlobals,
 			});
 		}
 	} catch (e) {

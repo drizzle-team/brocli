@@ -1,11 +1,20 @@
-import { type Command, command, getCommandNameWithParents } from './command-core';
-import type { BuilderConfig, ProcessedBuilderConfig } from './option-builder';
+import { type Command, getCommandNameWithParents } from './command-core';
+import type {
+	BuilderConfig,
+	GenericBuilderInternals,
+	GenericBuilderInternalsFields,
+	OptionType,
+	OutputType,
+	ProcessedBuilderConfig,
+	ProcessedOptions,
+} from './option-builder';
 
 export type CommandHelpEvent = {
 	type: 'command_help';
 	name: string | undefined;
 	description: string | undefined;
 	command: Command;
+	globals?: ProcessedOptions<Record<string, GenericBuilderInternals>>;
 };
 
 export type GlobalHelpEvent = {
@@ -13,6 +22,7 @@ export type GlobalHelpEvent = {
 	description: string | undefined;
 	name: string | undefined;
 	commands: Command[];
+	globals?: ProcessedOptions<Record<string, GenericBuilderInternals>>;
 };
 
 export type MissingArgsEvent = {
@@ -172,6 +182,34 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const desc = command.desc ?? command.shortDesc;
 			const subs = command.subcommands?.filter((s) => !s.hidden);
 			const subcommands = subs && subs.length ? subs : undefined;
+			const defaultGlobals = [
+				{
+					config: {
+						name: '--help',
+						aliases: ['-h'],
+						type: 'boolean' as OptionType,
+						description: `help for ${commandName}`,
+						default: undefined,
+					},
+					$output: undefined as any as boolean,
+				},
+				{
+					config: {
+						name: '--version',
+						aliases: ['-v'],
+						type: 'boolean' as OptionType,
+						description: `version${cliName ? ` for ${cliName}` : ''}`,
+						default: undefined,
+					},
+					$output: undefined as any as boolean,
+				},
+			];
+			const globals: {
+				config: ProcessedBuilderConfig;
+				$output: OutputType;
+			}[] = event.globals
+				? [...Object.values(event.globals), ...defaultGlobals]
+				: defaultGlobals;
 
 			if (desc !== undefined) {
 				console.log(`\n${desc}`);
@@ -181,7 +219,7 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				!opt.config.isHidden
 			);
 			const positionals = opts.filter((opt) => opt.config.type === 'positional');
-			const options = opts.filter((opt) => opt.config.type !== 'positional');
+			const options = [...opts.filter((opt) => opt.config.type !== 'positional'), ...globals];
 
 			console.log('\nUsage:');
 			if (command.handler) {
@@ -273,10 +311,6 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				console.log(data);
 			}
 
-			console.log('\nGlobal flags:');
-			console.log(`  -h, --help      help for ${commandName}`);
-			console.log(`  -v, --version   version${cliName ? ` for ${cliName}` : ''}`);
-
 			if (subcommands) {
 				console.log(
 					`\nUse "${
@@ -292,6 +326,31 @@ export const defaultEventHandler: EventHandler = async (event) => {
 			const cliName = event.name;
 			const desc = event.description;
 			const commands = event.commands.filter((c) => !c.hidden);
+			const defaultGlobals = [
+				{
+					config: {
+						name: '--help',
+						aliases: ['-h'],
+						type: 'boolean' as OptionType,
+						description: `help${cliName ? ` for ${cliName}` : ''}`,
+						default: undefined,
+					},
+					$output: undefined as any as boolean,
+				},
+				{
+					config: {
+						name: '--version',
+						aliases: ['-v'],
+						type: 'boolean' as OptionType,
+						description: `version${cliName ? ` for ${cliName}` : ''}`,
+						default: undefined,
+					},
+					$output: undefined as any as boolean,
+				},
+			];
+			const globals = event.globals
+				? [...defaultGlobals, ...Object.values(event.globals)]
+				: defaultGlobals;
 
 			if (desc !== undefined) {
 				console.log(`${desc}\n`);
@@ -328,10 +387,50 @@ export const defaultEventHandler: EventHandler = async (event) => {
 				console.log('\nNo available commands.');
 			}
 
+			const aliasLength = globals.reduce((p, e) => {
+				const currentLength = e.config.aliases.reduce((pa, a) => pa + a.length, 0)
+					+ ((e.config.aliases.length - 1) * 2) + 1; // Names + coupling symbols ", " + ending coma
+
+				return currentLength > p ? currentLength : p;
+			}, 0);
+			const paddedAliasLength = aliasLength > 0 ? aliasLength + 1 : 0;
+			const nameLength = globals.reduce((p, e) => {
+				const typeLen = getOptionTypeText(e.config).length;
+				const length = typeLen > 0 ? e.config.name.length + 1 + typeLen : e.config.name.length;
+
+				return length > p ? length : p;
+			}, 0) + 3;
+
+			const preDescPad = paddedAliasLength + nameLength + 2;
+			const gData = globals.map(({ config: opt }) =>
+				`  ${`${opt.aliases.length ? opt.aliases.join(', ') + ',' : ''}`.padEnd(paddedAliasLength)}${
+					`${opt.name}${
+						(() => {
+							const typeText = getOptionTypeText(opt);
+							return typeText.length ? ' ' + typeText : '';
+						})()
+					}`.padEnd(nameLength)
+				}${
+					(() => {
+						if (!opt.description?.length) {
+							return opt.default !== undefined
+								? `default: ${JSON.stringify(opt.default)}`
+								: '';
+						}
+
+						const split = opt.description.split('\n');
+						const first = split.shift()!;
+						const def = opt.default !== undefined ? ` (default: ${JSON.stringify(opt.default)})` : '';
+
+						const final = [first, ...split.map((s) => ''.padEnd(preDescPad) + s)].join('\n') + def;
+
+						return final;
+					})()
+				}`
+			).join('\n');
+
 			console.log('\nFlags:');
-			console.log(`  -h, --help      help${cliName ? ` for ${cliName}` : ''}`);
-			console.log(`  -v, --version   version${cliName ? ` for ${cliName}` : ''}`);
-			console.log('\n');
+			console.log(gData);
 
 			return true;
 		}

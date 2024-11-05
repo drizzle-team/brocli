@@ -850,6 +850,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.global_help.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.global_help.mock.lastCall).toStrictEqual([{
 			type: 'global_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			commands: commands,
@@ -867,6 +868,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.global_help.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.global_help.mock.lastCall).toStrictEqual([{
 			type: 'global_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			commands: commands,
@@ -884,6 +886,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(1);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: generate,
@@ -901,6 +904,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(2);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: cFirst.subcommands![0],
@@ -918,6 +922,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(3);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: generate,
@@ -935,6 +940,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(4);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: generate,
@@ -952,6 +958,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(5);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: generate,
@@ -969,6 +976,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.global_help.mock.calls.length).toStrictEqual(3);
 		expect(eventMocks.global_help.mock.lastCall).toStrictEqual([{
 			type: 'global_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			commands: commands,
@@ -986,6 +994,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(6);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: generate,
@@ -1003,6 +1012,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(7);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: cFirst.subcommands![0]!,
@@ -1020,6 +1030,7 @@ describe('Parsing tests', (it) => {
 		expect(eventMocks.command_help.mock.calls.length).toStrictEqual(8);
 		expect(eventMocks.command_help.mock.lastCall).toStrictEqual([{
 			type: 'command_help',
+			globals: undefined,
 			name: undefined,
 			description: undefined,
 			command: cFirst.subcommands![1]!,
@@ -1692,6 +1703,132 @@ spaces"',
 	});
 });
 
+describe('Globals tests', (it) => {
+	const globals = {
+		globalText: string(),
+		globalFlag: boolean(),
+		globalEnum: string().alias('-genum').enum('one', 'two', 'three'),
+		globalTextDef: string().default('strdef'),
+		globalFlagDef: boolean().default(false),
+		globalEnumDef: string().enum('one', 'two', 'three').default('three'),
+	};
+	// .toThrowError(new BroCliError(`Can't define option '--flag' - name is already in use by option '--flag'!`));
+
+	const conflictCmds = [
+		command({
+			name: 'conflict',
+			options: {
+				flag: boolean(),
+				text: string().alias('txt'),
+				aliased: boolean('aliased').alias('-al'),
+			},
+			handler: () => '',
+		}),
+	];
+
+	it('Names conflict', async () => {
+		expect(
+			await run(conflictCmds, {
+				globals: {
+					flag: boolean(),
+				},
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual(
+			"BroCli error: Global options overlap with option '--flag' of command 'conflict' on name",
+		);
+	});
+
+	it('Name conflicts with global alias', async () => {
+		expect(
+			await run(conflictCmds, {
+				globals: {
+					gFlag: boolean().alias('--flag'),
+				},
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual(
+			"BroCli error: Global options overlap with option '--flag' of command 'conflict' on alias '--flag'",
+		);
+	});
+
+	it('Alias conflicts with global alias', async () => {
+		expect(
+			await run(conflictCmds, {
+				globals: {
+					gFlag: boolean().alias('-al'),
+				},
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual(
+			"BroCli error: Global options overlap with option '--aliased' of command 'conflict' on alias '-al'",
+		);
+	});
+
+	it('Alias conflicts with global name', async () => {
+		expect(
+			await run(conflictCmds, {
+				globals: {
+					txt: string(),
+				},
+				// @ts-expect-error
+				noExit: true,
+			}),
+		).toStrictEqual(
+			"BroCli error: Global options overlap with option '--text' of command 'conflict' on alias '--txt'",
+		);
+	});
+
+	it('Separate', async () => {
+		let gs: any;
+
+		await run(commands, {
+			argSource: getArgs('-genum "one" c-first'),
+			globals,
+			hook(event, command, globals) {
+				gs = globals;
+			},
+			// @ts-expect-error
+			noExit: true,
+		});
+
+		expect(gs).toStrictEqual({
+			globalFlag: undefined,
+			globalText: undefined,
+			globalEnum: 'one',
+			globalTextDef: 'strdef',
+			globalFlagDef: false,
+			globalEnumDef: 'three',
+		});
+	});
+
+	it('Mixed with command options', async () => {
+		let gs: any;
+
+		await run(commands, {
+			argSource: getArgs('c-first --globalFlag true --globalText=str --string strval'),
+			globals,
+			hook(event, command, globals) {
+				gs = globals;
+			},
+			// @ts-expect-error
+			noExit: true,
+		});
+
+		expect(gs).toStrictEqual({
+			globalFlag: true,
+			globalText: 'str',
+			globalEnum: undefined,
+			globalTextDef: 'strdef',
+			globalFlagDef: false,
+			globalEnumDef: 'three',
+		});
+	});
+});
+
 describe('Type tests', (it) => {
 	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').enum('pg', 'mysql', 'sqlite')
@@ -1771,6 +1908,35 @@ describe('Type tests', (it) => {
 			handler: (opts) => {
 				expectTypeOf(opts).toEqualTypeOf<'transformed'>();
 			},
+		});
+	});
+
+	it('Globals type inferrence', () => {
+		const commands = [command({
+			name: 'test',
+			handler: (opts) => '',
+		})];
+
+		type ExpectedType = {
+			gBool: boolean;
+			gText: string;
+			gTextNoDef: string | undefined;
+			gTextRequired: string;
+			gEnum: 'variant_one' | 'variant_two' | undefined;
+		};
+
+		run(commands, {
+			globals: {
+				gBool: boolean().alias('-gb').default(false),
+				gText: string().alias('-gt').default('text'),
+				gTextNoDef: string().alias('-gtnd'),
+				gTextRequired: string().alias('-gtr').required(),
+				gEnum: string().enum('variant_one', 'variant_two'),
+			},
+			hook(event, command, globals) {
+				expectTypeOf(globals).toEqualTypeOf<ExpectedType>();
+			},
+			theme: testTheme,
 		});
 	});
 });

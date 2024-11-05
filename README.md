@@ -403,9 +403,12 @@ run(commands, {
 
 		return false;
 	},
-    hook: (event, command) => {
-        if(event === 'before') console.log(`Command '${command.name}' started`)
-        if(event === 'after') console.log(`Command '${command.name}' succesfully finished it's work`)
+    globals: {
+        flag: boolean('gflag').description('Global flag').default(false)
+    },    
+    hook: (event, command, globals) => {
+        if(event === 'before') console.log(`Command '${command.name}' started with flag ${globals.flag}`)
+        if(event === 'after') console.log(`Command '${command.name}' succesfully finished it's work with flag ${globals.flag}`)
     }
 })
 ```
@@ -445,7 +448,11 @@ Return:
     `true` | `Promise<true>` if you consider event processed  
     `false` | `Promise<false>` to redirect event to default theme  
 
--   `hook(event: EventType, command: Command)` - function that's used to execute code before and after every command's `transform` and `handler` execution  
+-   `globals` - global options that could be processed in `hook`  
+:warning: - positionals are not allowed in `globals`  
+:warning: - names and aliases must not overlap with options of commands  
+
+-   `hook(event: EventType, command: Command, options: TypeOf<typeof globals>)` - function that's used to execute code before and after every command's `transform` and `handler` execution  
 
 ### Additional functions
 
