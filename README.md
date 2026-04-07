@@ -244,7 +244,7 @@ Extensions:
     -   `value` - maximal allowed value  
     :warning: - does not limit defaults
 
--   `.optionTypeText(optionTypeText: string)` - defines option type text to be displayed in `help` command
+-   `.optionTypeText(optionTypeText: string)` - define custom help type labels to customise option help text displayed when using the `help` command
     -   `optionTypeText` - option type text to be displayed
     The default option type text is replaced e.g. declaring `.optionTypeText('opt-val')` results in `--opt number` becoming`--opt opt-val`.
     This is useful with `.enum()` options that have a large number of enum values.  
