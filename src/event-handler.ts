@@ -117,48 +117,52 @@ export type BroCliEventType = BroCliEvent['type'];
 const getOptionTypeText = (option: BuilderConfig) => {
 	let result = '';
 
-	switch (option.type) {
-		case 'boolean':
-			result = '';
-			break;
-		case 'number': {
-			if ((option.minVal ?? option.maxVal) !== undefined) {
-				let text = '';
+	if (option.optionTypeText) {
+		result = option.optionTypeText;
+	} else {
+		switch (option.type) {
+			case 'boolean':
+				result = '';
+				break;
+			case 'number': {
+				if ((option.minVal ?? option.maxVal) !== undefined) {
+					let text = '';
 
-				if (option.isInt) text = text + `integer `;
+					if (option.isInt) text = text + `integer `;
 
-				if (option.minVal !== undefined) text = text + `[${option.minVal};`;
-				else text = text + `(∞;`;
+					if (option.minVal !== undefined) text = text + `[${option.minVal};`;
+					else text = text + `(∞;`;
 
-				if (option.maxVal !== undefined) text = text + `${option.maxVal}]`;
-				else text = text + `∞)`;
+					if (option.maxVal !== undefined) text = text + `${option.maxVal}]`;
+					else text = text + `∞)`;
 
-				result = text;
+					result = text;
+					break;
+				}
+
+				if (option.isInt) {
+					result = 'integer';
+					break;
+				}
+
+				result = 'number';
 				break;
 			}
+			case 'string': {
+				if (option.enumVals) {
+					result = '[ ' + option.enumVals.join(' | ') + ' ]';
+					break;
+				}
 
-			if (option.isInt) {
-				result = 'integer';
+				result = 'string';
 				break;
 			}
-
-			result = 'number';
-			break;
-		}
-		case 'string': {
-			if (option.enumVals) {
-				result = '[ ' + option.enumVals.join(' | ') + ' ]';
+			case 'positional': {
+				result = `${option.isRequired ? '<' : '['}${option.enumVals ? option.enumVals.join('|') : option.name}${
+					option.isRequired ? '>' : ']'
+				}`;
 				break;
 			}
-
-			result = 'string';
-			break;
-		}
-		case 'positional': {
-			result = `${option.isRequired ? '<' : '['}${option.enumVals ? option.enumVals.join('|') : option.name}${
-				option.isRequired ? '>' : ']'
-			}`;
-			break;
 		}
 	}
 

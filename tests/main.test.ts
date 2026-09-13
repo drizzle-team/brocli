@@ -1932,7 +1932,7 @@ describe('Globals tests', (it) => {
 describe('Type tests', (it) => {
 	const generateOps = {
 		dialect: string().alias('-d', '-dlc').desc('Database dialect [pg, mysql, sqlite]').enum('pg', 'mysql', 'sqlite')
-			.required(),
+			.optionTypeText('dialect').required(),
 		schema: string('schema').alias('s').desc('Path to a schema file or folder'),
 		out: string().alias('o').desc("Output folder, 'drizzle' by default"),
 		name: string().alias('n').desc('Migration file name'),

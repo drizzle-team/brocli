@@ -16,6 +16,7 @@ export type BuilderConfig<TType extends OptionType = OptionType> = {
 	minVal?: number;
 	maxVal?: number;
 	enumVals?: [string, ...string[]];
+	optionTypeText?: string;
 };
 
 export type ProcessedBuilderConfig = {
@@ -30,6 +31,7 @@ export type ProcessedBuilderConfig = {
 	minVal?: number;
 	maxVal?: number;
 	enumVals?: [string, ...string[]];
+	optionTypeText?: string;
 };
 
 export type BuilderConfigLimited = BuilderConfig & {
@@ -184,6 +186,19 @@ export class OptionBuilderBase<
 		const config = this.config();
 
 		return new OptionBuilderBase({ ...config, description }) as any;
+	}
+
+	public optionTypeText<TOptionTypeText extends string>(optionTypeText: TOptionTypeText): Omit<
+		OptionBuilderBase<
+			TBuilderConfig,
+			TOutput,
+			TOmit | 'optionTypeText'
+		>,
+		TOmit | 'optionTypeText'
+	> {
+		const config = this.config();
+
+		return new OptionBuilderBase({ ...config, optionTypeText }) as any;
 	}
 
 	public hidden(): Omit<
